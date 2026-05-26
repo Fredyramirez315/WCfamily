@@ -18,7 +18,15 @@
     ::-webkit-scrollbar-track { background: #080b12; }
     ::-webkit-scrollbar-thumb { background: #1e2230; border-radius: 4px; }
     .tab-btn { -webkit-tap-highlight-color: transparent; }
-    .flag-icon { display: inline-block; width: 24px; height: 16px; object-fit: contain; vertical-align: middle; border-radius: 2px; }
+    .flag-img { 
+      display: inline-block; 
+      width: 24px; 
+      height: 16px; 
+      object-fit: cover; 
+      vertical-align: middle; 
+      border-radius: 2px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body>
@@ -66,7 +74,7 @@
         profileTitle: "My Profile", shareLink: "Share my link", shareLinkHint: "Send this to yourself to access your account on another device",
         copied: "Copied!", editProfile: "Edit Profile", favoriteTeams: "Favorite Teams", language: "Language", admin: "ADMIN",
         signOut: "Sign out", groupAdvance: "Top 2 + best 8 third-place advance", yourPrediction: "Your Prediction",
-        timeLabel: "CT (Central Time)"
+        timeLabel: "CT (Central Time)", reclaimingUser: "Reconnecting to your existing profile..."
       },
       es: {
         appName: "Copa Mundial FIFA 2026™", welcome: "Bienvenido a la", enterName: "Ingresa tu nombre para comenzar",
@@ -84,7 +92,7 @@
         profileTitle: "Mi Perfil", shareLink: "Compartir mi enlace", shareLinkHint: "Envíatelo para acceder desde otro dispositivo",
         copied: "¡Copiado!", editProfile: "Editar Perfil", favoriteTeams: "Equipos Favoritos", language: "Idioma", admin: "ADMIN",
         signOut: "Cerrar sesión", groupAdvance: "Top 2 + mejores 8 terceros avanzan", yourPrediction: "Tu Predicción",
-        timeLabel: "CT (Hora Central)"
+        timeLabel: "CT (Hora Central)", reclaimingUser: "Reconectando a tu perfil existente..."
       }
     };
 
@@ -104,31 +112,32 @@
       L: ["England","Croatia","Panama","Ghana"],
     };
 
-    // Windows Compatible Flags Mapping Layer
-    const FLAGS = {
-      Mexico:"🇲🇽","South Korea":"🇰🇷","South Africa":"🇿🇦",Czechia:"🇨🇿",
-      Canada:"🇨🇦",Switzerland:"🇨🇭",Qatar:"🇶🇦","Bosnia & Herzegovina":"🇧🇦",
-      Brazil:"🇧🇷",Morocco:"🇲🇦",Scotland:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",Haiti:"🇭🇹",
-      USA:"🇺🇸",Australia:"🇦🇺",Paraguay:"🇵🇾","Türkiye":"🇹🇷",
-      Germany:"🇩🇪",Ecuador:"🇪🇨","Ivory Coast":"🇨🇮","Curaçao":"🇨🇼",
-      Netherlands:"🇳🇱",Japan:"🇯🇵",Tunisia:"🇹🇳",Sweden:"🇸🇪",
-      Belgium:"🇧🇪",Iran:"🇮🇷",Egypt:"🇪🇬","New Zealand":"🇳🇿",
-      Spain:"🇪🇸",Uruguay:"🇺🇾","Saudi Arabia":"🇸🇦","Cape Verde":"🇨🇻",
-      France:"🇫🇷",Senegal:"🇸🇳",Norway:"🇳🇴",Iraq:"🇮🇶",
-      Argentina:"🇦🇷",Austria:"🇦🇹",Algeria:"🇩🇿",Jordan:"🇯🇴",
-      Portugal:"🇵🇹",Colombia:"🇨🇴",Uzbekistan:"🇺🇿","Congo DR":"🇨🇩",
-      England:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",Croatia:"🇭🇷",Panama:"🇵🇦",Ghana:"🇬🇭",
+    const FLAG_CODES = {
+      "Mexico": "mx", "South Korea": "kr", "South Africa": "za", "Czechia": "cz",
+      "Canada": "ca", "Switzerland": "ch", "Qatar": "qa", "Bosnia & Herzegovina": "ba",
+      "Brazil": "br", "Morocco": "ma", "Scotland": "gb-sct", "Haiti": "ht",
+      "USA": "us", "Australia": "au", "Paraguay": "py", "Türkiye": "tr",
+      "Germany": "de", "Ecuador": "ec", "Ivory Coast": "ci", "Curaçao": "cw",
+      "Netherlands": "nl", "Japan": "jp", "Tunisia": "tn", "Sweden": "se",
+      "Belgium": "be", "Iran": "ir", "Egypt": "eg", "New Zealand": "nz",
+      "Spain": "es", "Uruguay": "uy", "Saudi Arabia": "sa", "Cape Verde": "cv",
+      "France": "fr", "Senegal": "sn", "Norway": "no", "Iraq": "iq",
+      "Argentina": "ar", "Austria": "at", "Algeria": "dz", "Jordan": "jo",
+      "Portugal": "pt", "Colombia": "co", "Uzbekistan": "uz", "Congo DR": "cd",
+      "England": "gb-eng", "Croatia": "hr", "Panama": "pa", "Ghana": "gh"
     };
 
-    // Helper component to safeguard flag graphics rendering smoothly on Windows OS environments
-    function Flag({ team, size = "text-base" }) {
-      if (team === "England") {
-        return <img className="flag-icon" src="https://flagcdn.com/w40/gb-eng.png" alt="England" style={{verticalAlign:"middle", transform:"translateY(-1px)"}} />;
-      }
-      if (team === "Scotland") {
-        return <img className="flag-icon" src="https://flagcdn.com/w40/gb-sct.png" alt="Scotland" style={{verticalAlign:"middle", transform:"translateY(-1px)"}} />;
-      }
-      return <span style={{display:"inline-block", verticalAlign:"middle"}}>{FLAGS[team] || "🏳"}</span>;
+    function Flag({ team }) {
+      const code = FLAG_CODES[team];
+      if (!code) return <span style={{ marginRight: 6 }}>🏳️</span>;
+      return (
+        <img 
+          className="flag-img" 
+          src={`https://flagcdn.com/w40/${code}.png`} 
+          alt={`${team} flag`} 
+          style={{ marginRight: 6 }}
+        />
+      );
     }
 
     const VENUES = [
@@ -157,7 +166,6 @@
       J:["kc","hou","kc"],K:["mia","atl","mia"],L:["nyNJ","bos","nyNJ"],
     };
     const GROUP_START_DAYS={A:0,B:1,C:1,D:1,E:2,F:2,G:3,H:3,I:4,J:4,K:5,L:5};
-    
     const SLOT_TIMES = ["12:00 PM", "3:00 PM", "6:00 PM", "8:00 PM", "2:00 PM", "5:00 PM"];
 
     function generateGroupMatches() {
@@ -190,7 +198,7 @@
     function isToday(dateStr) { return new Date().toISOString().split("T")[0] === dateStr; }
 
     // ─── COMPONENTS ───────────────────────────────────────────────────────────────
-    function Onboarding({ onComplete }) {
+    function Onboarding({ onComplete, existingUsers }) {
       const [step, setStep] = useState(0);
       const [lang, setLang] = useState("en");
       const [name, setName] = useState("");
@@ -199,11 +207,23 @@
       const t = T[lang];
 
       const toggleFav = (team) => setFavorites(f => f.includes(team)?f.filter(x=>x!==team):[...f,team]);
+      
       const finish = () => {
         if (!name.trim()) return;
-        const uid = genUID();
-        const profile = { uid, name: name.trim(), lang, favorites, isAdmin: pin==="3812", adminPin: pin||null };
-        onComplete(profile);
+        const cleanName = name.trim();
+        
+        // Anti-Duplicate Login Logic: Check if username already exists in database
+        const existing = Object.values(existingUsers || {}).find(u => u.name.toLowerCase() === cleanName.toLowerCase());
+        
+        if (existing) {
+          // Instantly claim the original account instead of adding a clone
+          onComplete(existing);
+        } else {
+          // Truly unique user setup
+          const uid = genUID();
+          const profile = { uid, name: cleanName, lang, favorites, isAdmin: pin==="3812", adminPin: pin||null };
+          onComplete(profile);
+        }
       };
 
       return (
@@ -217,7 +237,7 @@
             {step===0 && (
               <div>
                 <div style={{fontSize:"1.1rem",fontWeight:700,color:"#facc15",marginBottom:16}}>{t.pickLanguage}</div>
-                {[["en","🇺🇸 English"],["es","🇲🇽 Español"]].map(([code,label])=>(
+                {[["en","English"],["es","Español"]].map(([code,label])=>(
                   <button key={code} onClick={()=>setLang(code)}
                     style={{width:"100%",padding:"12px",marginBottom:8,background:lang===code?"rgba(250,204,21,0.12)":"transparent",border:`1px solid ${lang===code?"#facc15":"#1e2230"}`,borderRadius:10,color:lang===code?"#facc15":"#9aa0b0",fontWeight:lang===code?700:400,cursor:"pointer",textAlign:"left"}}>
                     {label}
@@ -230,46 +250,15 @@
               <div>
                 <div style={{fontSize:"1.1rem",fontWeight:700,color:"#facc15",marginBottom:4}}>{t.yourName}</div>
                 <div style={{fontSize:"0.78rem",color:"#5a6070",marginBottom:16}}>{t.enterName}</div>
-                <input value={name} onChange={e=>setName(e.target.value)} placeholder={t.namePlaceholder} onKeyDown={e=>e.key==="Enter"&&name.trim()&&setStep(2)}
-                  style={{width:"100%",background:"#0a0d14",border:"1px solid #1e2230",borderRadius:10,padding:"12px 14px",color:"#f0f4ff",fontSize:"1.1rem",fontWeight:600,marginBottom:12,boxSizing:"border-box"}}
+                <input value={name} onChange={e=>setName(e.target.value)} placeholder={t.namePlaceholder} onKeyDown={e=>e.key==="Enter"&&name.trim()&&finish()}
+                  style={{width:"100%",background:"#0a0d14",border:"1px solid #1e2230",borderRadius:10,padding:"12px 14px",color:"#f0f4ff",fontSize:"1.1rem",fontWeight:600,marginBottom:12,boxSizing:"box-sizing"}}
                   autoFocus/>
                 <div style={{fontSize:"0.72rem",color:"#5a6070",marginBottom:6}}>{t.adminPin}</div>
                 <input type="number" value={pin} onChange={e=>setPin(e.target.value.slice(0,4))} placeholder="••••" maxLength={4}
-                  style={{width:"100%",background:"#0a0d14",border:"1px solid #1e2230",borderRadius:10,padding:"10px 14px",color:"#f0f4ff",marginBottom:16,boxSizing:"border-box"}}/>
+                  style={{width:"100%",background:"#0a0d14",border:"1px solid #1e2230",borderRadius:10,padding:"10px 14px",color:"#f0f4ff",marginBottom:16,boxSizing:"box-sizing"}}/>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>setStep(0)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #1e2230",borderRadius:10,color:"#5a6070",cursor:"pointer"}}>←</button>
-                  <button onClick={()=>name.trim()&&setStep(2)} style={{flex:3,padding:"11px",background:"#facc15",border:"none",borderRadius:10,color:"#000",fontWeight:800,fontSize:"1rem",cursor:"pointer",opacity:name.trim()?1:0.5}}>→</button>
-                </div>
-              </div>
-            )}
-            {step===2 && (
-              <div>
-                <div style={{fontSize:"1.1rem",fontWeight:700,color:"#facc15",marginBottom:4}}>{t.pickFavorites}</div>
-                <div style={{fontSize:"0.72rem",color:"#5a6070",marginBottom:12}}>{t.favoritesHint}</div>
-                <div style={{maxHeight:260,overflowY:"auto",marginBottom:14}}>
-                  {Object.entries(GROUPS).map(([g,teams])=>(
-                    <div key={g} style={{marginBottom:8}}>
-                      <div style={{fontSize:"0.65rem",color:"#facc15",fontWeight:700,letterSpacing:"0.1em",marginBottom:4}}>GROUP {g}</div>
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                        {teams.map(team=>{
-                          const sel = favorites.includes(team);
-                          return (
-                            <button key={team} onClick={()=>toggleFav(team)}
-                              style={{padding:"5px 9px",borderRadius:8,border:`1px solid ${sel?"#facc15":"#1e2230"}`,background:sel?"rgba(250,204,21,0.12)":"transparent",color:sel?"#facc15":"#7a8090",fontSize:"0.72rem",fontWeight:sel?700:400,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                              <Flag team={team} /> <span>{team}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>setStep(1)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #1e2230",borderRadius:10,color:"#5a6070",cursor:"pointer"}}>←</button>
-                    <button onClick={finish} style={{flex:3,padding:"11px",background:"#facc15",border:"none",borderRadius:10,color:"#000",fontWeight:800,fontSize:"1rem",cursor:"pointer"}}>{t.done} ✓</button>
-                  </div>
-                  <button onClick={finish} style={{padding:"8px",background:"transparent",border:"none",color:"#7a8090",fontSize:"0.75rem",cursor:"pointer",textDecoration:"underline"}}>{t.skip}</button>
+                  <button onClick={finish} style={{flex:3,padding:"11px",background:"#facc15",border:"none",borderRadius:10,color:"#000",fontWeight:800,fontSize:"1rem",cursor:"pointer",opacity:name.trim()?1:0.5}}>{t.letsGo}</button>
                 </div>
               </div>
             )}
@@ -295,14 +284,14 @@
             <div style={{fontSize:"0.7rem",color:"#5a6070",marginBottom:18}}>{match.date} {match.time} {t.timeLabel}</div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <div style={{flex:1,textAlign:"center"}}>
-                <div style={{fontSize:"2rem", height:"40px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
+                <div style={{height:"24px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.home}</div>
                 <input type="number" min="0" value={h} onChange={e=>setH(e.target.value)}
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #facc15",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#facc15",fontFamily:"'Bebas Neue',sans-serif"}}/>
               </div>
               <div style={{color:"#3a4050",fontWeight:700,fontSize:"1rem"}}>—</div>
               <div style={{flex:1,textAlign:"center"}}>
-                <div style={{fontSize:"2rem", height:"40px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
+                <div style={{height:"24px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.away}</div>
                 <input type="number" min="0" value={a} onChange={e=>setA(e.target.value)}
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #facc15",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#facc15",fontFamily:"'Bebas Neue',sans-serif"}}/>
@@ -314,7 +303,7 @@
               {err && <div style={{color:"#f87171",fontSize:"0.72rem",marginTop:4}}>{err}</div>}
             </div>
             <div style={{display:"flex",gap:8}}>
-              <button onClick={onClose} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #1e2230",borderRadius:10,color:"#5a6070",cursor:"pointer"}}>{t.cancel}</button>
+              <button onClick={onClose} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #1e2230",borderRadius:10,color:"#5a6070",cursor:"pointer"}}> {t.cancel}</button>
               <button onClick={save} style={{flex:2,padding:"11px",background:"#facc15",border:"none",borderRadius:10,color:"#000",fontWeight:800,cursor:"pointer"}}>{t.saveScore}</button>
             </div>
           </div>
@@ -332,14 +321,14 @@
             <div style={{fontSize:"0.7rem",color:"#5a6070",marginBottom:18}}>{match.date} · {match.time} {t.timeLabel}</div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <div style={{flex:1,textAlign:"center"}}>
-                <div style={{fontSize:"2rem", height:"40px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
+                <div style={{height:"24px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.home}</div>
                 <input type="number" min="0" value={h} onChange={e=>setH(e.target.value)}
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #a78bfa",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#a78bfa",fontFamily:"'Bebas Neue',sans-serif"}}/>
               </div>
               <div style={{color:"#3a4050",fontWeight:700,fontSize:"1rem"}}>—</div>
               <div style={{flex:1,textAlign:"center"}}>
-                <div style={{fontSize:"2rem", height:"40px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
+                <div style={{height:"24px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.away}</div>
                 <input type="number" min="0" value={a} onChange={e=>setA(e.target.value)}
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #a78bfa",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#a78bfa",fontFamily:"'Bebas Neue',sans-serif"}}/>
@@ -369,9 +358,9 @@
             <span style={{color:"#facc15",fontWeight:600}}>{match.time} {t.timeLabel}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <div style={{flex:1,textAlign:"center"}}>
-              <div style={{fontSize:"1.6rem", height:"32px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
-              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:4}}>{match.home}</div>
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+              <div style={{height:"24px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
+              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:4,textAlign:"center"}}>{match.home}</div>
             </div>
             <div style={{textAlign:"center",minWidth:72}}>
               {hasScore ?
@@ -383,9 +372,9 @@
                 </div>
               )}
             </div>
-            <div style={{flex:1,textAlign:"center"}}>
-              <div style={{fontSize:"1.6rem", height:"32px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
-              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:4}}>{match.away}</div>
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+              <div style={{height:"24px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
+              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:4,textAlign:"center"}}>{match.away}</div>
             </div>
           </div>
           <div style={{fontSize:"0.63rem",color:"#3a4050",textAlign:"center",marginTop:5}}>{v?.fifaName} · {v?.city}</div>
@@ -399,7 +388,6 @@
       );
     }
 
-    // Tab Views
     function GroupsTab({ t, matches, profile, predictions }) {
       return (
         <div style={{paddingBottom:80}}>
@@ -527,7 +515,7 @@
       );
     }
 
-    function ProfileTab({ profile, setProfile, t, fbReady, onUpdateTeams }) {
+    function ProfileTab({ profile, setProfile, t, onUpdateTeams }) {
       const [copied, setCopied] = useState(false);
       const [editing, setEditing] = useState(false);
       const [favs, setFavs] = useState(profile.favorites || []);
@@ -553,7 +541,7 @@
               </div>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {profile.favorites?.map(f => (
-                  <span key={f} style={{background:"#0a0d14",border:"1px solid #1e2230",padding:"4px 8px",borderRadius:6,fontSize:"0.68rem",display:"inline-flex",alignItems:"center",gap:4}}><Flag team={f} /> {f}</span>
+                  <span key={f} style={{background:"#0a0d14",border:"1px solid #1e2230",padding:"4px 8px",borderRadius:6,fontSize:"0.68rem",display:"inline-flex",alignItems:"center"}}><Flag team={f} /> {f}</span>
                 )) || <span style={{fontSize:"0.68rem",color:"#3a4050"}}>None</span>}
               </div>
             </div>
@@ -564,7 +552,7 @@
                 {ALL_TEAMS.map(team => {
                   const sel = favs.includes(team);
                   return (
-                    <button key={team} onClick={()=>toggleFav(team)} style={{padding:"4px 8px",fontSize:"0.65rem",borderRadius:6,background:sel?"rgba(250,204,21,0.1)":"transparent",border:`1px solid ${sel?"#facc15":"#1e2230"}`,color:sel?"#facc15":"#7a8090",cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                    <button key={team} onClick={()=>toggleFav(team)} style={{padding:"4px 8px",fontSize:"0.65rem",borderRadius:6,background:sel?"rgba(250,204,21,0.1)":"transparent",border:`1px solid ${sel?"#facc15":"#1e2230"}`,color:sel?"#facc15":"#7a8090",cursor:"pointer",display:"flex",alignItems:"center"}}>
                       <Flag team={team} /> {team}
                     </button>
                   );
@@ -621,24 +609,20 @@
 
         const uRef = fbRef("users");
         uRef.on("value", snap => {
-          if (snap.exists()) {
-            const allUsers = snap.val();
-            setUsers(allUsers);
-            
-            const params = new URLSearchParams(window.location.search);
-            const urlUid = params.get("uid");
-            const localUid = localStorage.getItem("wc26_uid");
-            const activeUid = urlUid || localUid;
+          const allUsers = snap.exists() ? snap.val() : {};
+          setUsers(allUsers);
+          
+          const params = new URLSearchParams(window.location.search);
+          const urlUid = params.get("uid");
+          const localUid = localStorage.getItem("wc26_uid");
+          const activeUid = urlUid || localUid;
 
-            if (activeUid && allUsers[activeUid]) {
-              setProfile(allUsers[activeUid]);
-              if (urlUid) localStorage.setItem("wc26_uid", urlUid);
-              window.history.replaceState({}, document.title, window.location.pathname);
-            }
-            setLoadingSession(false);
-          } else {
-            setLoadingSession(false);
+          if (activeUid && allUsers[activeUid]) {
+            setProfile(allUsers[activeUid]);
+            if (urlUid) localStorage.setItem("wc26_uid", urlUid);
+            window.history.replaceState({}, document.title, window.location.pathname);
           }
+          setLoadingSession(false);
         });
 
         const pRef = fbRef("predictions");
@@ -680,7 +664,7 @@
         );
       }
 
-      if (!profile) return <Onboarding onComplete={handleOnboardComplete} />;
+      if (!profile) return <Onboarding onComplete={handleOnboardComplete} existingUsers={users} />;
 
       const tabs = [
         { id: "schedule", label: t.schedule, icon: "📅" },
@@ -710,7 +694,7 @@
           {tab === "knockout" && <KnockoutTab t={t} />}
           {tab === "venues" && <VenuesTab t={t} />}
           {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} />}
-          {tab === "me" && <ProfileTab profile={profile} setProfile={setProfile} t={t} fbReady={true} onUpdateTeams={handleUpdateTeams} />}
+          {tab === "me" && <ProfileTab profile={profile} setProfile={setProfile} t={t} onUpdateTeams={handleUpdateTeams} />}
 
           <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1018",borderTop:"1px solid #1e2230",display:"flex",zIndex:50}}>
             <div style={{display:"flex",width:"100%",maxWidth:480,margin:"0 auto"}}>
