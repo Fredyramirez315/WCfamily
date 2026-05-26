@@ -18,6 +18,7 @@
     ::-webkit-scrollbar-track { background: #080b12; }
     ::-webkit-scrollbar-thumb { background: #1e2230; border-radius: 4px; }
     .tab-btn { -webkit-tap-highlight-color: transparent; }
+    .flag-icon { display: inline-block; width: 24px; height: 16px; object-fit: contain; vertical-align: middle; border-radius: 2px; }
   </style>
 </head>
 <body>
@@ -103,6 +104,7 @@
       L: ["England","Croatia","Panama","Ghana"],
     };
 
+    // Windows Compatible Flags Mapping Layer
     const FLAGS = {
       Mexico:"🇲🇽","South Korea":"🇰🇷","South Africa":"🇿🇦",Czechia:"🇨🇿",
       Canada:"🇨🇦",Switzerland:"🇨🇭",Qatar:"🇶🇦","Bosnia & Herzegovina":"🇧🇦",
@@ -117,6 +119,17 @@
       Portugal:"🇵🇹",Colombia:"🇨🇴",Uzbekistan:"🇺🇿","Congo DR":"🇨🇩",
       England:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",Croatia:"🇭🇷",Panama:"🇵🇦",Ghana:"🇬🇭",
     };
+
+    // Helper component to safeguard flag graphics rendering smoothly on Windows OS environments
+    function Flag({ team, size = "text-base" }) {
+      if (team === "England") {
+        return <img className="flag-icon" src="https://flagcdn.com/w40/gb-eng.png" alt="England" style={{verticalAlign:"middle", transform:"translateY(-1px)"}} />;
+      }
+      if (team === "Scotland") {
+        return <img className="flag-icon" src="https://flagcdn.com/w40/gb-sct.png" alt="Scotland" style={{verticalAlign:"middle", transform:"translateY(-1px)"}} />;
+      }
+      return <span style={{display:"inline-block", verticalAlign:"middle"}}>{FLAGS[team] || "🏳"}</span>;
+    }
 
     const VENUES = [
       {id:"nyNJ",fifaName:"New York New Jersey Stadium",realName:"MetLife Stadium",city:"East Rutherford, NJ",country:"USA",capacity:82500},
@@ -145,7 +158,6 @@
     };
     const GROUP_START_DAYS={A:0,B:1,C:1,D:1,E:2,F:2,G:3,H:3,I:4,J:4,K:5,L:5};
     
-    // Default US Central times spread across daily match slots
     const SLOT_TIMES = ["12:00 PM", "3:00 PM", "6:00 PM", "8:00 PM", "2:00 PM", "5:00 PM"];
 
     function generateGroupMatches() {
@@ -243,8 +255,8 @@
                           const sel = favorites.includes(team);
                           return (
                             <button key={team} onClick={()=>toggleFav(team)}
-                              style={{padding:"5px 9px",borderRadius:8,border:`1px solid ${sel?"#facc15":"#1e2230"}`,background:sel?"rgba(250,204,21,0.12)":"transparent",color:sel?"#facc15":"#7a8090",fontSize:"0.72rem",fontWeight:sel?700:400,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-                              {FLAGS[team]||"🏳"} {team}
+                              style={{padding:"5px 9px",borderRadius:8,border:`1px solid ${sel?"#facc15":"#1e2230"}`,background:sel?"rgba(250,204,21,0.12)":"transparent",color:sel?"#facc15":"#7a8090",fontSize:"0.72rem",fontWeight:sel?700:400,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+                              <Flag team={team} /> <span>{team}</span>
                             </button>
                           );
                         })}
@@ -283,14 +295,14 @@
             <div style={{fontSize:"0.7rem",color:"#5a6070",marginBottom:18}}>{match.date} {match.time} {t.timeLabel}</div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <div style={{flex:1,textAlign:"center"}}>
-                <div style={{fontSize:"2rem"}}>{FLAGS[match.home]||"🏳"}</div>
+                <div style={{fontSize:"2rem", height:"40px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.home}</div>
                 <input type="number" min="0" value={h} onChange={e=>setH(e.target.value)}
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #facc15",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#facc15",fontFamily:"'Bebas Neue',sans-serif"}}/>
               </div>
               <div style={{color:"#3a4050",fontWeight:700,fontSize:"1rem"}}>—</div>
               <div style={{flex:1,textAlign:"center"}}>
-                <div style={{fontSize:"2rem"}}>{FLAGS[match.away]||"🏳"}</div>
+                <div style={{fontSize:"2rem", height:"40px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.away}</div>
                 <input type="number" min="0" value={a} onChange={e=>setA(e.target.value)}
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #facc15",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#facc15",fontFamily:"'Bebas Neue',sans-serif"}}/>
@@ -320,14 +332,14 @@
             <div style={{fontSize:"0.7rem",color:"#5a6070",marginBottom:18}}>{match.date} · {match.time} {t.timeLabel}</div>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
               <div style={{flex:1,textAlign:"center"}}>
-                <div style={{fontSize:"2rem"}}>{FLAGS[match.home]||"🏳"}</div>
+                <div style={{fontSize:"2rem", height:"40px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.home}</div>
                 <input type="number" min="0" value={h} onChange={e=>setH(e.target.value)}
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #a78bfa",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#a78bfa",fontFamily:"'Bebas Neue',sans-serif"}}/>
               </div>
               <div style={{color:"#3a4050",fontWeight:700,fontSize:"1rem"}}>—</div>
               <div style={{flex:1,textAlign:"center"}}>
-                <div style={{fontSize:"2rem"}}>{FLAGS[match.away]||"🏳"}</div>
+                <div style={{fontSize:"2rem", height:"40px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.away}</div>
                 <input type="number" min="0" value={a} onChange={e=>setA(e.target.value)}
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #a78bfa",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#a78bfa",fontFamily:"'Bebas Neue',sans-serif"}}/>
@@ -358,8 +370,8 @@
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{flex:1,textAlign:"center"}}>
-              <div style={{fontSize:"1.6rem"}}>{FLAGS[match.home]||"🏳"}</div>
-              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:2}}>{match.home}</div>
+              <div style={{fontSize:"1.6rem", height:"32px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
+              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:4}}>{match.home}</div>
             </div>
             <div style={{textAlign:"center",minWidth:72}}>
               {hasScore ?
@@ -372,8 +384,8 @@
               )}
             </div>
             <div style={{flex:1,textAlign:"center"}}>
-              <div style={{fontSize:"1.6rem"}}>{FLAGS[match.away]||"🏳"}</div>
-              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:2}}>{match.away}</div>
+              <div style={{fontSize:"1.6rem", height:"32px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.away} /></div>
+              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:4}}>{match.away}</div>
             </div>
           </div>
           <div style={{fontSize:"0.63rem",color:"#3a4050",textAlign:"center",marginTop:5}}>{v?.fifaName} · {v?.city}</div>
@@ -539,9 +551,9 @@
                 <span>{t.favoriteTeams.toUpperCase()}</span>
                 <button onClick={()=>setEditing(true)} style={{background:"transparent",border:"none",color:"#facc15",cursor:"pointer",fontSize:"0.7rem"}}>✏️ EDIT</button>
               </div>
-              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {profile.favorites?.map(f => (
-                  <span key={f} style={{background:"#0a0d14",border:"1px solid #1e2230",padding:"4px 8px",borderRadius:6,fontSize:"0.68rem"}}>{FLAGS[f]} {f}</span>
+                  <span key={f} style={{background:"#0a0d14",border:"1px solid #1e2230",padding:"4px 8px",borderRadius:6,fontSize:"0.68rem",display:"inline-flex",alignItems:"center",gap:4}}><Flag team={f} /> {f}</span>
                 )) || <span style={{fontSize:"0.68rem",color:"#3a4050"}}>None</span>}
               </div>
             </div>
@@ -552,8 +564,8 @@
                 {ALL_TEAMS.map(team => {
                   const sel = favs.includes(team);
                   return (
-                    <button key={team} onClick={()=>toggleFav(team)} style={{padding:"4px 8px",fontSize:"0.65rem",borderRadius:6,background:sel?"rgba(250,204,21,0.1)":"transparent",border:`1px solid ${sel?"#facc15":"#1e2230"}`,color:sel?"#facc15":"#7a8090",cursor:"pointer"}}>
-                      {FLAGS[team]} {team}
+                    <button key={team} onClick={()=>toggleFav(team)} style={{padding:"4px 8px",fontSize:"0.65rem",borderRadius:6,background:sel?"rgba(250,204,21,0.1)":"transparent",border:`1px solid ${sel?"#facc15":"#1e2230"}`,color:sel?"#facc15":"#7a8090",cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+                      <Flag team={team} /> {team}
                     </button>
                   );
                 })}
