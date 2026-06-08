@@ -167,31 +167,108 @@
       {id:"van",fifaName:"Vancouver Stadium",realName:"BC Place",city:"Vancouver, BC",country:"Canada",capacity:54000},
     ];
 
-    const GROUP_VENUES = {
-      A:["mxc","gdl","mxc"],B:["tor","van","van"],C:["mia","phi","bos"],
-      D:["la","sea","la"],E:["kc","hou","kc"],F:["sf","la","sf"],
-      G:["atl","phi","atl"],H:["gdl","mty","gdl"],I:["kc","dal","kc"],
-      J:["kc","hou","kc"],K:["mia","atl","mia"],L:["nyNJ","bos","nyNJ"],
-    };
-    const GROUP_START_DAYS={A:0,B:1,C:1,D:1,E:2,F:2,G:3,H:3,I:4,J:4,K:5,L:5};
-    const SLOT_TIMES = ["12:00 PM", "3:00 PM", "6:00 PM", "8:00 PM"];
-
-    function generateGroupMatches() {
-      const matches=[]; let id=1;
-      Object.keys(GROUPS).forEach(g=>{
-        const t=GROUPS[g],vv=GROUP_VENUES[g],base=GROUP_START_DAYS[g];
-        [[0,1,1],[2,3,1],[0,2,2],[1,3,2],[0,3,3],[1,2,3]].forEach(([hi,ai,md], idx)=>{
-          const d=new Date("2026-06-11");
-          d.setDate(d.getDate()+base+(md-1)*5);
-          const timeSlot = SLOT_TIMES[idx % SLOT_TIMES.length];
-          matches.push({id:id++,group:g,home:t[hi],away:t[ai],matchday:md,
-            date:d.toISOString().split("T")[0],time:timeSlot,venueId:vv[md-1]||"dal",
-            homeScore:null,awayScore:null,stage:"group"});
-        });
-      });
-      return matches;
-    }
-    const BASE_MATCHES = generateGroupMatches();
+    // ─── VERIFIED SCHEDULE ───
+    // Source: ESPN, FOX Sports, NBC Sports, worldcupwiki.com — all cross-referenced
+    // Times in Central Time (CT = ET minus 1 hour)
+    // Note: 3 matches listed at 11:00 PM CT air on that night but are the next calendar
+    //       day in ET (midnight ET). Date shown is the CT calendar date.
+    const BASE_MATCHES = [
+      // ── JUNE 11 (Thursday) ──
+      {id:1,  group:"A", home:"Mexico",               away:"South Africa",        date:"2026-06-11", time:"2:00 PM",  venueId:"mxc", matchday:1, homeScore:null, awayScore:null},
+      {id:2,  group:"A", home:"South Korea",           away:"Czechia",             date:"2026-06-11", time:"9:00 PM",  venueId:"gdl", matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 12 (Friday) ──
+      {id:3,  group:"B", home:"Canada",                away:"Bosnia & Herzegovina",date:"2026-06-12", time:"2:00 PM",  venueId:"tor", matchday:1, homeScore:null, awayScore:null},
+      {id:4,  group:"D", home:"USA",                   away:"Paraguay",            date:"2026-06-12", time:"8:00 PM",  venueId:"la",  matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 13 (Saturday) ──
+      {id:5,  group:"B", home:"Qatar",                 away:"Switzerland",         date:"2026-06-13", time:"2:00 PM",  venueId:"sf",  matchday:1, homeScore:null, awayScore:null},
+      {id:6,  group:"C", home:"Brazil",                away:"Morocco",             date:"2026-06-13", time:"5:00 PM",  venueId:"nyNJ",matchday:1, homeScore:null, awayScore:null},
+      {id:7,  group:"C", home:"Haiti",                 away:"Scotland",            date:"2026-06-13", time:"8:00 PM",  venueId:"bos", matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 13–14 (Sat night / Sun) ──
+      // Australia vs Türkiye: midnight ET = 11 PM CT Saturday June 13
+      {id:8,  group:"D", home:"Australia",             away:"Türkiye",             date:"2026-06-13", time:"11:00 PM", venueId:"van", matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 14 (Sunday) ──
+      {id:9,  group:"E", home:"Germany",               away:"Curaçao",             date:"2026-06-14", time:"12:00 PM", venueId:"hou", matchday:1, homeScore:null, awayScore:null},
+      {id:10, group:"F", home:"Netherlands",           away:"Japan",               date:"2026-06-14", time:"3:00 PM",  venueId:"dal", matchday:1, homeScore:null, awayScore:null},
+      {id:11, group:"E", home:"Ivory Coast",           away:"Ecuador",             date:"2026-06-14", time:"6:00 PM",  venueId:"phi", matchday:1, homeScore:null, awayScore:null},
+      {id:12, group:"F", home:"Sweden",                away:"Tunisia",             date:"2026-06-14", time:"9:00 PM",  venueId:"mty", matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 15 (Monday) ──
+      {id:13, group:"H", home:"Spain",                 away:"Cape Verde",          date:"2026-06-15", time:"11:00 AM", venueId:"atl", matchday:1, homeScore:null, awayScore:null},
+      {id:14, group:"G", home:"Belgium",               away:"Egypt",               date:"2026-06-15", time:"2:00 PM",  venueId:"sea", matchday:1, homeScore:null, awayScore:null},
+      {id:15, group:"H", home:"Saudi Arabia",          away:"Uruguay",             date:"2026-06-15", time:"5:00 PM",  venueId:"mia", matchday:1, homeScore:null, awayScore:null},
+      {id:16, group:"G", home:"Iran",                  away:"New Zealand",         date:"2026-06-15", time:"8:00 PM",  venueId:"la",  matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 16 (Tuesday) ──
+      {id:17, group:"I", home:"France",                away:"Senegal",             date:"2026-06-16", time:"2:00 PM",  venueId:"nyNJ",matchday:1, homeScore:null, awayScore:null},
+      {id:18, group:"I", home:"Iraq",                  away:"Norway",              date:"2026-06-16", time:"5:00 PM",  venueId:"bos", matchday:1, homeScore:null, awayScore:null},
+      {id:19, group:"J", home:"Argentina",             away:"Algeria",             date:"2026-06-16", time:"8:00 PM",  venueId:"kc",  matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 16–17 (Tue night / Wed) ──
+      // Austria vs Jordan: midnight ET = 11 PM CT Tuesday June 16
+      {id:20, group:"J", home:"Austria",               away:"Jordan",              date:"2026-06-16", time:"11:00 PM", venueId:"sf",  matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 17 (Wednesday) ──
+      {id:21, group:"K", home:"Portugal",              away:"Congo DR",            date:"2026-06-17", time:"12:00 PM", venueId:"hou", matchday:1, homeScore:null, awayScore:null},
+      {id:22, group:"L", home:"England",               away:"Croatia",             date:"2026-06-17", time:"3:00 PM",  venueId:"dal", matchday:1, homeScore:null, awayScore:null},
+      {id:23, group:"L", home:"Ghana",                 away:"Panama",              date:"2026-06-17", time:"6:00 PM",  venueId:"tor", matchday:1, homeScore:null, awayScore:null},
+      {id:24, group:"K", home:"Uzbekistan",            away:"Colombia",            date:"2026-06-17", time:"9:00 PM",  venueId:"mxc", matchday:1, homeScore:null, awayScore:null},
+      // ── JUNE 18 (Thursday) ──
+      {id:25, group:"A", home:"Czechia",               away:"South Africa",        date:"2026-06-18", time:"11:00 AM", venueId:"atl", matchday:2, homeScore:null, awayScore:null},
+      {id:26, group:"B", home:"Switzerland",           away:"Bosnia & Herzegovina",date:"2026-06-18", time:"2:00 PM",  venueId:"la",  matchday:2, homeScore:null, awayScore:null},
+      {id:27, group:"B", home:"Canada",                away:"Qatar",               date:"2026-06-18", time:"5:00 PM",  venueId:"van", matchday:2, homeScore:null, awayScore:null},
+      {id:28, group:"A", home:"Mexico",                away:"South Korea",         date:"2026-06-18", time:"8:00 PM",  venueId:"gdl", matchday:2, homeScore:null, awayScore:null},
+      // ── JUNE 19 (Friday) ──
+      {id:29, group:"D", home:"USA",                   away:"Australia",           date:"2026-06-19", time:"2:00 PM",  venueId:"sea", matchday:2, homeScore:null, awayScore:null},
+      {id:30, group:"C", home:"Scotland",              away:"Morocco",             date:"2026-06-19", time:"5:00 PM",  venueId:"bos", matchday:2, homeScore:null, awayScore:null},
+      {id:31, group:"C", home:"Brazil",                away:"Haiti",               date:"2026-06-19", time:"7:30 PM",  venueId:"phi", matchday:2, homeScore:null, awayScore:null},
+      {id:32, group:"D", home:"Türkiye",               away:"Paraguay",            date:"2026-06-19", time:"10:00 PM", venueId:"sf",  matchday:2, homeScore:null, awayScore:null},
+      // ── JUNE 20 (Saturday) ──
+      {id:33, group:"F", home:"Netherlands",           away:"Sweden",              date:"2026-06-20", time:"12:00 PM", venueId:"hou", matchday:2, homeScore:null, awayScore:null},
+      {id:34, group:"E", home:"Germany",               away:"Ivory Coast",         date:"2026-06-20", time:"3:00 PM",  venueId:"tor", matchday:2, homeScore:null, awayScore:null},
+      {id:35, group:"E", home:"Ecuador",               away:"Curaçao",             date:"2026-06-20", time:"7:00 PM",  venueId:"kc",  matchday:2, homeScore:null, awayScore:null},
+      // ── JUNE 20–21 (Sat night / Sun) ──
+      // Tunisia vs Japan: midnight ET = 11 PM CT Saturday June 20
+      {id:36, group:"F", home:"Tunisia",               away:"Japan",               date:"2026-06-20", time:"11:00 PM", venueId:"mty", matchday:2, homeScore:null, awayScore:null},
+      // ── JUNE 21 (Sunday) ──
+      {id:37, group:"H", home:"Spain",                 away:"Saudi Arabia",        date:"2026-06-21", time:"11:00 AM", venueId:"atl", matchday:2, homeScore:null, awayScore:null},
+      {id:38, group:"G", home:"Belgium",               away:"Iran",                date:"2026-06-21", time:"2:00 PM",  venueId:"la",  matchday:2, homeScore:null, awayScore:null},
+      {id:39, group:"H", home:"Uruguay",               away:"Cape Verde",          date:"2026-06-21", time:"5:00 PM",  venueId:"mia", matchday:2, homeScore:null, awayScore:null},
+      {id:40, group:"G", home:"New Zealand",           away:"Egypt",               date:"2026-06-21", time:"8:00 PM",  venueId:"van", matchday:2, homeScore:null, awayScore:null},
+      // ── JUNE 22 (Monday) ──
+      {id:41, group:"J", home:"Argentina",             away:"Austria",             date:"2026-06-22", time:"12:00 PM", venueId:"dal", matchday:2, homeScore:null, awayScore:null},
+      {id:42, group:"I", home:"France",                away:"Iraq",                date:"2026-06-22", time:"4:00 PM",  venueId:"phi", matchday:2, homeScore:null, awayScore:null},
+      {id:43, group:"I", home:"Norway",                away:"Senegal",             date:"2026-06-22", time:"7:00 PM",  venueId:"nyNJ",matchday:2, homeScore:null, awayScore:null},
+      {id:44, group:"J", home:"Jordan",                away:"Algeria",             date:"2026-06-22", time:"10:00 PM", venueId:"sf",  matchday:2, homeScore:null, awayScore:null},
+      // ── JUNE 23 (Tuesday) ──
+      {id:45, group:"K", home:"Portugal",              away:"Uzbekistan",          date:"2026-06-23", time:"12:00 PM", venueId:"hou", matchday:2, homeScore:null, awayScore:null},
+      {id:46, group:"L", home:"England",               away:"Ghana",               date:"2026-06-23", time:"3:00 PM",  venueId:"bos", matchday:2, homeScore:null, awayScore:null},
+      {id:47, group:"L", home:"Panama",                away:"Croatia",             date:"2026-06-23", time:"6:00 PM",  venueId:"tor", matchday:2, homeScore:null, awayScore:null},
+      {id:48, group:"K", home:"Colombia",              away:"Congo DR",            date:"2026-06-23", time:"9:00 PM",  venueId:"gdl", matchday:2, homeScore:null, awayScore:null},
+      // ── JUNE 24 (Wednesday) — FINAL MATCHDAY Groups A, B, C (simultaneous pairs) ──
+      {id:49, group:"B", home:"Switzerland",           away:"Canada",              date:"2026-06-24", time:"2:00 PM",  venueId:"van", matchday:3, homeScore:null, awayScore:null},
+      {id:50, group:"B", home:"Bosnia & Herzegovina",  away:"Qatar",               date:"2026-06-24", time:"2:00 PM",  venueId:"sea", matchday:3, homeScore:null, awayScore:null},
+      {id:51, group:"C", home:"Scotland",              away:"Brazil",              date:"2026-06-24", time:"5:00 PM",  venueId:"mia", matchday:3, homeScore:null, awayScore:null},
+      {id:52, group:"C", home:"Morocco",               away:"Haiti",               date:"2026-06-24", time:"5:00 PM",  venueId:"atl", matchday:3, homeScore:null, awayScore:null},
+      {id:53, group:"A", home:"Czechia",               away:"Mexico",              date:"2026-06-24", time:"8:00 PM",  venueId:"mxc", matchday:3, homeScore:null, awayScore:null},
+      {id:54, group:"A", home:"South Africa",          away:"South Korea",         date:"2026-06-24", time:"8:00 PM",  venueId:"mty", matchday:3, homeScore:null, awayScore:null},
+      // ── JUNE 25 (Thursday) — FINAL MATCHDAY Groups D, E, F ──
+      {id:55, group:"E", home:"Curaçao",               away:"Ivory Coast",         date:"2026-06-25", time:"3:00 PM",  venueId:"phi", matchday:3, homeScore:null, awayScore:null},
+      {id:56, group:"E", home:"Ecuador",               away:"Germany",             date:"2026-06-25", time:"3:00 PM",  venueId:"nyNJ",matchday:3, homeScore:null, awayScore:null},
+      {id:57, group:"F", home:"Japan",                 away:"Sweden",              date:"2026-06-25", time:"6:00 PM",  venueId:"dal", matchday:3, homeScore:null, awayScore:null},
+      {id:58, group:"F", home:"Tunisia",               away:"Netherlands",         date:"2026-06-25", time:"6:00 PM",  venueId:"kc",  matchday:3, homeScore:null, awayScore:null},
+      {id:59, group:"D", home:"Türkiye",               away:"USA",                 date:"2026-06-25", time:"9:00 PM",  venueId:"la",  matchday:3, homeScore:null, awayScore:null},
+      {id:60, group:"D", home:"Paraguay",              away:"Australia",           date:"2026-06-25", time:"9:00 PM",  venueId:"sf",  matchday:3, homeScore:null, awayScore:null},
+      // ── JUNE 26 (Friday) — FINAL MATCHDAY Groups G, H, I ──
+      {id:61, group:"I", home:"Norway",                away:"France",              date:"2026-06-26", time:"2:00 PM",  venueId:"bos", matchday:3, homeScore:null, awayScore:null},
+      {id:62, group:"I", home:"Senegal",               away:"Iraq",                date:"2026-06-26", time:"2:00 PM",  venueId:"tor", matchday:3, homeScore:null, awayScore:null},
+      {id:63, group:"H", home:"Cape Verde",            away:"Saudi Arabia",        date:"2026-06-26", time:"7:00 PM",  venueId:"hou", matchday:3, homeScore:null, awayScore:null},
+      {id:64, group:"H", home:"Uruguay",               away:"Spain",               date:"2026-06-26", time:"7:00 PM",  venueId:"gdl", matchday:3, homeScore:null, awayScore:null},
+      {id:65, group:"G", home:"Egypt",                 away:"Iran",                date:"2026-06-26", time:"10:00 PM", venueId:"sea", matchday:3, homeScore:null, awayScore:null},
+      {id:66, group:"G", home:"New Zealand",           away:"Belgium",             date:"2026-06-26", time:"10:00 PM", venueId:"van", matchday:3, homeScore:null, awayScore:null},
+      // ── JUNE 27 (Saturday) — FINAL MATCHDAY Groups J, K, L ──
+      {id:67, group:"L", home:"Panama",                away:"England",             date:"2026-06-27", time:"4:00 PM",  venueId:"nyNJ",matchday:3, homeScore:null, awayScore:null},
+      {id:68, group:"L", home:"Croatia",               away:"Ghana",               date:"2026-06-27", time:"4:00 PM",  venueId:"phi", matchday:3, homeScore:null, awayScore:null},
+      {id:69, group:"K", home:"Colombia",              away:"Portugal",            date:"2026-06-27", time:"6:30 PM",  venueId:"mia", matchday:3, homeScore:null, awayScore:null},
+      {id:70, group:"K", home:"Congo DR",              away:"Uzbekistan",          date:"2026-06-27", time:"6:30 PM",  venueId:"atl", matchday:3, homeScore:null, awayScore:null},
+      {id:71, group:"J", home:"Algeria",               away:"Austria",             date:"2026-06-27", time:"9:00 PM",  venueId:"kc",  matchday:3, homeScore:null, awayScore:null},
+      {id:72, group:"J", home:"Jordan",                away:"Argentina",           date:"2026-06-27", time:"9:00 PM",  venueId:"dal", matchday:3, homeScore:null, awayScore:null},
+    ];
 
     function calcMatchPoints(match, pred) {
       if (!pred || pred.homeScore === null || pred.homeScore === undefined) return null;
@@ -315,7 +392,7 @@
 
       const save = () => {
         if (pin !== "3812") { setErr("Wrong PIN"); return; }
-        onSave(h===""?null:+h, a===""?null:+a);
+        onSave(h===""?0:+h, a===""?0:+a);
       };
       return (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
@@ -377,7 +454,7 @@
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={onClose} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #1e2230",borderRadius:10,color:"#5a6070",cursor:"pointer"}}>{t.cancel}</button>
-              <button onClick={()=>onSave(h===""?null:+h,a===""?null:+a)} style={{flex:2,padding:"11px",background:"#a78bfa",border:"none",borderRadius:10,color:"#000",fontWeight:800,cursor:"pointer"}}>{t.lockIn}</button>
+              <button onClick={()=>onSave(h===""?0:+h,a===""?0:+a)} style={{flex:2,padding:"11px",background:"#a78bfa",border:"none",borderRadius:10,color:"#000",fontWeight:800,cursor:"pointer"}}>{t.lockIn}</button>
             </div>
           </div>
         </div>
@@ -484,46 +561,137 @@
     // ─── SCHEDULE TAB ───
     function ScheduleTab({ t, matches, profile, predictions, onScoreModal, onPredictModal }) {
       const [filter, setFilter] = useState("all");
-      
-      const filtered = matches.filter(m => {
-        if (filter === "today") return isToday(m.date);
-        if (filter === "fav") return profile?.favorites?.includes(m.home) || profile?.favorites?.includes(m.away);
-        return true;
-      });
+      const [teamSearch, setTeamSearch] = useState("");
+      const [selectedTeam, setSelectedTeam] = useState(null);
+
+      const favTeams = profile?.favorites || [];
+      const ALL_TEAMS_SORTED = Object.values(GROUPS).flat();
+
+      // Autocomplete suggestions
+      const suggestions = teamSearch.length > 0 && !selectedTeam
+        ? ALL_TEAMS_SORTED.filter(tm => tm.toLowerCase().includes(teamSearch.toLowerCase()))
+        : [];
+
+      const clearTeamSearch = () => { setTeamSearch(""); setSelectedTeam(null); };
+
+      // When a team is selected, override other filters
+      const filtered = selectedTeam
+        ? matches.filter(m => m.home === selectedTeam || m.away === selectedTeam)
+        : matches.filter(m => {
+            if (filter === "today") return isToday(m.date);
+            if (filter === "fav") return favTeams.includes(m.home) || favTeams.includes(m.away);
+            return true;
+          });
 
       const matchesByDate = {};
       filtered.forEach(m => {
         if (!matchesByDate[m.date]) matchesByDate[m.date] = [];
         matchesByDate[m.date].push(m);
       });
-
       const sortedDates = Object.keys(matchesByDate).sort();
+
+      // Find which group a team is in
+      const teamGroup = selectedTeam
+        ? Object.entries(GROUPS).find(([, teams]) => teams.includes(selectedTeam))?.[0]
+        : null;
 
       return (
         <div style={{paddingBottom:80}}>
-          <div style={{display:"flex",gap:6,marginBottom:12}}>
-            {["all", "today", "fav"].map(f => (
-              <button key={f} onClick={()=>setFilter(f)} style={{flex:1,padding:"8px",borderRadius:8,border:"none",background:filter===f?"#facc15":"#141720",color:filter===f?"#000":"#7a8090",fontSize:"0.68rem",fontWeight:700,cursor:"pointer"}}>
-                {f === "all" ? "CHRONOLOGICAL" : f === "today" ? "TODAY" : "⭐ MY TEAMS"}
-              </button>
-            ))}
+
+          {/* Team search box */}
+          <div style={{position:"relative",marginBottom:10}}>
+            <div style={{display:"flex",alignItems:"center",background:"#141720",border:"1px solid #1e2230",borderRadius:10,overflow:"visible"}}>
+              <span style={{padding:"0 10px",fontSize:"0.85rem",color:"#5a6070"}}>🔍</span>
+              <input
+                value={teamSearch}
+                onChange={e => { setTeamSearch(e.target.value); setSelectedTeam(null); }}
+                placeholder="Search by team name…"
+                style={{flex:1,background:"transparent",border:"none",padding:"9px 0",color:"#f0f4ff",fontSize:"0.8rem",outline:"none"}}
+              />
+              {(teamSearch || selectedTeam) && (
+                <button onClick={clearTeamSearch} style={{background:"transparent",border:"none",color:"#5a6070",cursor:"pointer",padding:"0 10px",fontSize:"0.9rem"}}>✕</button>
+              )}
+            </div>
+            {/* Dropdown suggestions */}
+            {suggestions.length > 0 && (
+              <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#141720",border:"1px solid #1e2230",borderTop:"none",borderRadius:"0 0 10px 10px",zIndex:20,maxHeight:200,overflowY:"auto"}}>
+                {suggestions.map(team => (
+                  <button key={team} onClick={() => { setSelectedTeam(team); setTeamSearch(team); }}
+                    style={{width:"100%",padding:"9px 12px",background:"transparent",border:"none",borderBottom:"1px solid #121620",color:"#f0f4ff",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontSize:"0.78rem",textAlign:"left"}}>
+                    <Flag team={team} />
+                    <span style={{fontWeight:600}}>{team}</span>
+                    <span style={{fontSize:"0.62rem",color:"#5a6070",marginLeft:"auto"}}>
+                      Group {Object.entries(GROUPS).find(([,ts]) => ts.includes(team))?.[0]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {sortedDates.length === 0 ? <div style={{textAlign:"center",color:"#3a4050",padding:"2rem",fontSize:"0.8rem"}}>{t.noMatches}</div> :
-            sortedDates.map(dateStr => {
-              const dOptions = { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' };
-              const cleanDate = new Date(dateStr + "T00:00:00").toLocaleDateString(profile?.lang || "en", dOptions);
-              
-              return (
-                <div key={dateStr} style={{marginBottom:20}}>
-                  <div style={{fontSize:"0.85rem",fontWeight:800,color:"#facc15",padding:"4px 8px",background:"rgba(250,204,21,0.08)",borderRadius:6,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>
-                    📅 {cleanDate}
-                  </div>
-                  {matchesByDate[dateStr].map(m => (
-                    <MatchCard key={m.id} match={m} profile={profile} t={t} isFav={profile?.favorites?.includes(m.home)||profile?.favorites?.includes(m.away)} userPred={predictions?.[profile?.uid]?.[m.id]} onScore={()=>onScoreModal(m)} onPredict={()=>onPredictModal(m)} />
-                  ))}
+
+          {/* Favorite teams quick-links (shown when no search active) */}
+          {favTeams.length > 0 && !selectedTeam && teamSearch.length === 0 && (
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:"0.6rem",color:"#7a8090",fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>⭐ MY TEAMS — TAP TO FILTER</div>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                {favTeams.map(team => (
+                  <button key={team} onClick={() => { setSelectedTeam(team); setTeamSearch(team); }}
+                    style={{padding:"5px 10px",borderRadius:8,border:"1px solid rgba(250,204,21,0.3)",background:"rgba(250,204,21,0.06)",color:"#facc15",fontSize:"0.7rem",fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                    <Flag team={team} />{team}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Selected team header */}
+          {selectedTeam && (
+            <div style={{marginBottom:10}}>
+              <button onClick={clearTeamSearch} style={{display:"flex",alignItems:"center",gap:5,background:"transparent",border:"none",color:"#7a8090",cursor:"pointer",fontSize:"0.7rem",fontWeight:700,marginBottom:8,padding:0}}>
+                ← All Matches
+              </button>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"rgba(250,204,21,0.06)",border:"1px solid rgba(250,204,21,0.2)",borderRadius:10}}>
+                <Flag team={selectedTeam} />
+                <div>
+                  <div style={{fontWeight:800,fontSize:"0.85rem",color:"#facc15"}}>{selectedTeam}</div>
+                  <div style={{fontSize:"0.62rem",color:"#5a6070"}}>Group {teamGroup} · {filtered.length} matches</div>
                 </div>
-              );
-            })
+              </div>
+            </div>
+          )}
+
+          {/* Filter buttons — hidden when team selected */}
+          {!selectedTeam && (
+            <div style={{display:"flex",gap:6,marginBottom:12}}>
+              {["all", "today", "fav"].map(f => (
+                <button key={f} onClick={()=>setFilter(f)} style={{flex:1,padding:"8px",borderRadius:8,border:"none",background:filter===f?"#facc15":"#141720",color:filter===f?"#000":"#7a8090",fontSize:"0.68rem",fontWeight:700,cursor:"pointer"}}>
+                  {f === "all" ? "ALL" : f === "today" ? "TODAY" : "⭐ FAVS"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Match list */}
+          {sortedDates.length === 0
+            ? <div style={{textAlign:"center",color:"#3a4050",padding:"2rem",fontSize:"0.8rem"}}>{t.noMatches}</div>
+            : sortedDates.map(dateStr => {
+                const dOptions = { weekday:"long", month:"short", day:"numeric", year:"numeric" };
+                const cleanDate = new Date(dateStr + "T12:00:00").toLocaleDateString(profile?.lang || "en", dOptions);
+                return (
+                  <div key={dateStr} style={{marginBottom:20}}>
+                    <div style={{fontSize:"0.85rem",fontWeight:800,color:"#facc15",padding:"4px 8px",background:"rgba(250,204,21,0.08)",borderRadius:6,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+                      📅 {cleanDate}
+                    </div>
+                    {matchesByDate[dateStr].map(m => (
+                      <MatchCard key={m.id} match={m} profile={profile} t={t}
+                        isFav={favTeams.includes(m.home) || favTeams.includes(m.away)}
+                        userPred={predictions?.[profile?.uid]?.[m.id]}
+                        onScore={() => onScoreModal(m)}
+                        onPredict={() => onPredictModal(m)} />
+                    ))}
+                  </div>
+                );
+              })
           }
         </div>
       );
@@ -674,6 +842,7 @@
       const [predictions, setPredictions] = useState({});
 
       const [scoreModal, setScoreModal] = useState(null);
+      const [scheduleKey, setScheduleKey] = useState(0);
       const [predictModal, setPredictModal] = useState(null);
 
       const t = T[profile?.lang || "en"];
@@ -772,7 +941,7 @@
           </div>
 
           {tab === "groups" && <GroupsTab t={t} matches={matches} />}
-          {tab === "schedule" && <ScheduleTab t={t} matches={matches} profile={profile} predictions={predictions} onScoreModal={setScoreModal} onPredictModal={setPredictModal} />}
+          {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} onScoreModal={setScoreModal} onPredictModal={setPredictModal} />}
           {tab === "knockout" && <KnockoutTab t={t} />}
           {tab === "venues" && <VenuesTab t={t} />}
           {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} />}
@@ -781,7 +950,7 @@
           <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1018",borderTop:"1px solid #1e2230",display:"flex",zIndex:50}}>
             <div style={{display:"flex",width:"100%",maxWidth:480,margin:"0 auto"}}>
               {tabs.map(tb => (
-                <button key={tb.id} onClick={()=>setTab(tb.id)} className="tab-btn"
+                <button key={tb.id} onClick={()=>{ if(tb.id==="schedule"&&tab==="schedule") setScheduleKey(k=>k+1); setTab(tb.id); }} className="tab-btn"
                   style={{flex:1,padding:"8px 2px",background:"transparent",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
                   <span style={{fontSize:"0.95rem"}}>{tb.icon}</span>
                   <span style={{fontSize:"0.52rem",fontWeight:700,color:tab===tb.id?"#facc15":"#3a4050"}}>{tb.label.toUpperCase()}</span>
