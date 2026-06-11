@@ -479,7 +479,7 @@
           onComplete(existing);
         } else {
           const uid = genUID();
-          onComplete({ uid, name: cleanName, lang, favorites: [], isAdmin: pin==="3812", adminPin: pin||null });
+          onComplete({ uid, name: cleanName, lang, favorites: [], isAdmin: pin.length > 0, adminPin: pin||null });
         }
       };
 
@@ -525,15 +525,36 @@
     }
 
     // ─── SCORE MODAL ───
-    function ScoreModal({ match, t, onSave, onClose }) {
+    function ScoreModal({ match, t, profile, onSave, onClose }) {
       const [h, setH] = useState(match.homeScore??"");
       const [a, setA] = useState(match.awayScore??"");
       const [pin, setPin] = useState("");
       const [err, setErr] = useState("");
 
       const save = () => {
-        if (pin !== "3812") { setErr("Wrong PIN"); return; }
-        onSave(h===""?0:+h, a===""?0:+a);
+        // Check against profile PIN first, then fall back to reading from Firebase
+        const localPin = profile?.adminPin;
+        if (localPin) {
+          // We have a local PIN — check against it
+          if (pin !== String(localPin)) { setErr("Wrong PIN"); return; }
+          onSave(h===""?0:+h, a===""?0:+a);
+        } else if (db && profile?.uid) {
+          // No local PIN — read from Firebase (handles cross-device case)
+          db.ref(`users/${profile.uid}/adminPin`).once("value").then(snap => {
+            const fbPin = snap.val();
+            if (!fbPin) { setErr("No admin PIN set"); return; }
+            if (pin !== String(fbPin)) { setErr("Wrong PIN"); return; }
+            // Sync PIN to local profile so future checks don't need Firebase
+            if (profile) {
+              const stored = JSON.parse(localStorage.getItem("wc26v4_profile") || "{}");
+              stored.adminPin = fbPin;
+              localStorage.setItem("wc26v4_profile", JSON.stringify(stored));
+            }
+            onSave(h===""?0:+h, a===""?0:+a);
+          }).catch(() => setErr("Could not verify PIN"));
+        } else {
+          setErr("Cannot verify PIN — check connection");
+        }
       };
       return (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
@@ -1354,7 +1375,7 @@
           </div>
 
           {scoreModal && (
-            <ScoreModal match={scoreModal} t={t} onSave={saveMatchScore} onClose={()=>setScoreModal(null)} />
+            <ScoreModal match={scoreModal} t={t} profile={profile} onSave={saveMatchScore} onClose={()=>setScoreModal(null)} />
           )}
           {predictModal && (
             <PredictModal match={predictModal} pred={predictions?.[profile.uid]?.[predictModal.id]} t={t} onSave={saveUserPrediction} onClose={()=>setPredictModal(null)} />
