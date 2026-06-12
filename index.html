@@ -837,13 +837,19 @@
     }
 
     // ─── SCHEDULE TAB ───
-    function ScheduleTab({ t, matches, profile, predictions, users, onScoreModal, onPredictModal }) {
+    function ScheduleTab({ t, matches, profile, predictions, users, onScoreModal, onPredictModal, venueFilter, onClearVenueFilter }) {
       const [filter, setFilter] = useState("all");
       const [teamSearch, setTeamSearch] = useState("");
       const [selectedTeam, setSelectedTeam] = useState(null);
 
+      // If a venue filter arrives, clear team search so they don't conflict
+      useEffect(() => {
+        if (venueFilter) { setSelectedTeam(null); setTeamSearch(""); }
+      }, [venueFilter]);
+
       const favTeams = profile?.favorites || [];
       const ALL_TEAMS_SORTED = Object.values(GROUPS).flat();
+      const selectedVenue = venueFilter ? VENUES.find(v => v.id === venueFilter) : null;
 
       // Autocomplete suggestions
       const suggestions = teamSearch.length > 0 && !selectedTeam
@@ -852,14 +858,16 @@
 
       const clearTeamSearch = () => { setTeamSearch(""); setSelectedTeam(null); };
 
-      // When a team is selected, override other filters
-      const filtered = selectedTeam
-        ? matches.filter(m => m.home === selectedTeam || m.away === selectedTeam)
-        : matches.filter(m => {
-            if (filter === "today") return isToday(m.date);
-            if (filter === "fav") return favTeams.includes(m.home) || favTeams.includes(m.away);
-            return true;
-          });
+      // When a venue or team is selected, override other filters
+      const filtered = venueFilter
+        ? matches.filter(m => m.venueId === venueFilter)
+        : selectedTeam
+          ? matches.filter(m => m.home === selectedTeam || m.away === selectedTeam)
+          : matches.filter(m => {
+              if (filter === "today") return isToday(m.date);
+              if (filter === "fav") return favTeams.includes(m.home) || favTeams.includes(m.away);
+              return true;
+            });
 
       const matchesByDate = {};
       filtered.forEach(m => {
@@ -879,8 +887,25 @@
       return (
         <div style={{paddingBottom:80}}>
 
+          {/* VENUE FILTER HEADER */}
+          {venueFilter && selectedVenue && (
+            <div style={{marginBottom:12}}>
+              <button onClick={onClearVenueFilter}
+                style={{display:"flex",alignItems:"center",gap:5,background:"transparent",border:"none",color:"#7a8090",cursor:"pointer",fontSize:"0.7rem",fontWeight:700,marginBottom:8,padding:0}}>
+                ← All Matches
+              </button>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 13px",background:"rgba(167,139,250,0.05)",border:"1px solid rgba(167,139,250,0.2)",borderRadius:12}}>
+                <span style={{fontSize:"1.4rem"}}>🏟️</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:800,fontSize:"0.85rem",color:"#a78bfa"}}>{selectedVenue.fifaName}</div>
+                  <div style={{fontSize:"0.65rem",color:"#5a6070",marginTop:1}}>{selectedVenue.realName} · {selectedVenue.city} · {filtered.length} match{filtered.length!==1?"es":""}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TODAY STICKY SECTION */}
-          {todayMatches.length > 0 && !selectedTeam && filter !== "today" && (
+          {todayMatches.length > 0 && !selectedTeam && !venueFilter && filter !== "today" && (
             <div style={{background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.25)",borderRadius:12,padding:"10px 12px",marginBottom:12}}>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"#ef4444",letterSpacing:"0.06em",marginBottom:8}}>📺 {t.todayMatches}</div>
               {todayMatches.map(m => (
@@ -893,8 +918,8 @@
             </div>
           )}
 
-          {/* Team search box */}
-          <div style={{position:"relative",marginBottom:10}}>
+          {/* Team search box — hidden when venue filter active */}
+          {!venueFilter && <div style={{position:"relative",marginBottom:10}}>
             <div style={{display:"flex",alignItems:"center",background:"#141720",border:"1px solid #1e2230",borderRadius:10,overflow:"visible"}}>
               <span style={{padding:"0 10px",fontSize:"0.85rem",color:"#5a6070"}}>🔍</span>
               <input
@@ -922,10 +947,10 @@
                 ))}
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Favorite teams quick-links (shown when no search active) */}
-          {favTeams.length > 0 && !selectedTeam && teamSearch.length === 0 && (
+          {favTeams.length > 0 && !selectedTeam && !venueFilter && teamSearch.length === 0 && (
             <div style={{marginBottom:10}}>
               <div style={{fontSize:"0.6rem",color:"#7a8090",fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>⭐ MY TEAMS — TAP TO FILTER</div>
               <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
@@ -955,8 +980,8 @@
             </div>
           )}
 
-          {/* Filter buttons — hidden when team selected */}
-          {!selectedTeam && (
+          {/* Filter buttons — hidden when team or venue selected */}
+          {!selectedTeam && !venueFilter && (
             <div style={{display:"flex",gap:6,marginBottom:12}}>
               {["all", "today", "fav"].map(f => (
                 <button key={f} onClick={()=>setFilter(f)} style={{flex:1,padding:"8px",borderRadius:8,border:"none",background:filter===f?"#facc15":"#141720",color:filter===f?"#000":"#7a8090",fontSize:"0.68rem",fontWeight:700,cursor:"pointer"}}>
@@ -1111,20 +1136,64 @@
     }
 
     // ─── VENUES TAB ───
-    function VenuesTab({ t }) {
+    function VenuesTab({ t, matches, onVenueSelect }) {
+      const countryFlag = { USA:"🇺🇸", Mexico:"🇲🇽", Canada:"🇨🇦" };
+      const countryOrder = ["USA", "Mexico", "Canada"];
+
+      // Count matches per venue
+      const matchCount = {};
+      (matches||[]).forEach(m => {
+        matchCount[m.venueId] = (matchCount[m.venueId]||0) + 1;
+      });
+
       return (
         <div style={{paddingBottom:80}}>
-          {VENUES.map(v => (
-            <div key={v.id} style={{background:"#141720",border:"1px solid #1e2230",borderRadius:14,padding:"12px",marginBottom:6}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"start"}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff"}}>{v.fifaName}</div>
-                  <div style={{fontSize:"0.68rem",color:"#7a8090",marginTop:1}}>{v.realName} — <span style={{color:"#5a6070"}}>{v.city}, {v.country}</span></div>
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"#facc15",marginBottom:4}}>VENUES</div>
+          <div style={{fontSize:"0.65rem",color:"#5a6070",marginBottom:14}}>Tap a venue to see its matches</div>
+
+          {countryOrder.map(country => {
+            const countryVenues = VENUES.filter(v => v.country === country);
+            return (
+              <div key={country} style={{marginBottom:16}}>
+                <div style={{fontSize:"0.65rem",fontWeight:700,color:"#facc15",letterSpacing:"0.08em",marginBottom:7,paddingBottom:4,borderBottom:"1px solid #1e2230"}}>
+                  {countryFlag[country]} {country.toUpperCase()} — {countryVenues.length} venues
                 </div>
-                <div style={{fontSize:"0.62rem",background:"#0a0d14",padding:"3px 6px",borderRadius:6,color:"#9aa0b0",fontWeight:600}}>{v.capacity.toLocaleString()} {t.capacity}</div>
+                {countryVenues.map(v => {
+                  const mc = matchCount[v.id] || 0;
+                  return (
+                    <button key={v.id} onClick={()=>onVenueSelect(v.id)}
+                      style={{width:"100%",background:"#141720",border:"1px solid #1e2230",borderRadius:14,padding:"12px",marginBottom:6,cursor:"pointer",textAlign:"left",display:"block",transition:"border-color 0.15s"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff"}}>{v.fifaName}</div>
+                          <div style={{fontSize:"0.67rem",color:"#7a8090",marginTop:1}}>
+                            {v.realName} — {v.city}
+                          </div>
+                          {v.note && (
+                            <div style={{fontSize:"0.62rem",color:"#facc15",marginTop:3,fontWeight:600}}>★ {v.note}</div>
+                          )}
+                        </div>
+                        <div style={{flexShrink:0,textAlign:"right"}}>
+                          <div style={{fontSize:"0.62rem",background:"#0a0d14",padding:"3px 6px",borderRadius:6,color:"#9aa0b0",fontWeight:600,marginBottom:4}}>
+                            {v.capacity.toLocaleString()} {t.capacity}
+                          </div>
+                          {mc > 0 && (
+                            <div style={{fontSize:"0.6rem",color:"#facc15",fontWeight:700}}>
+                              {mc} match{mc>1?"es":""}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{marginTop:8,display:"flex",alignItems:"center",gap:4,color:"#a78bfa",fontSize:"0.65rem",fontWeight:700}}>
+                        <span>📅 View schedule</span>
+                        <span style={{fontSize:"0.7rem"}}>→</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       );
     }
@@ -1266,6 +1335,7 @@
       const [scoreModal, setScoreModal] = useState(null);
       const [scheduleKey, setScheduleKey] = useState(0);
       const [predictModal, setPredictModal] = useState(null);
+      const [venueFilter, setVenueFilter] = useState(null); // venueId or null
 
       const t = T[profile?.lang || "en"];
 
@@ -1363,16 +1433,16 @@
           </div>
 
           {tab === "groups" && <GroupsTab t={t} matches={matches} />}
-          {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} />}
+          {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} venueFilter={venueFilter} onClearVenueFilter={()=>setVenueFilter(null)} />}
           {tab === "knockout" && <KnockoutTab t={t} />}
-          {tab === "venues" && <VenuesTab t={t} />}
+          {tab === "venues" && <VenuesTab t={t} matches={matches} onVenueSelect={(vid)=>{ setVenueFilter(vid); setTab("schedule"); }} />}
           {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} />}
           {tab === "me" && <ProfileTab profile={profile} t={t} onUpdateTeams={handleUpdateTeams} />}
 
           <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1018",borderTop:"1px solid #1e2230",display:"flex",zIndex:50}}>
             <div style={{display:"flex",width:"100%",maxWidth:480,margin:"0 auto"}}>
               {tabs.map(tb => (
-                <button key={tb.id} onClick={()=>{ if(tb.id==="schedule"&&tab==="schedule") setScheduleKey(k=>k+1); setTab(tb.id); }} className="tab-btn"
+                <button key={tb.id} onClick={()=>{ if(tb.id==="schedule"&&tab==="schedule"){ setScheduleKey(k=>k+1); setVenueFilter(null); } setTab(tb.id); }} className="tab-btn"
                   style={{flex:1,padding:"8px 2px",background:"transparent",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
                   <span style={{fontSize:"0.95rem"}}>{tb.icon}</span>
                   <span style={{fontSize:"0.52rem",fontWeight:700,color:tab===tb.id?"#facc15":"#3a4050"}}>{tb.label.toUpperCase()}</span>
