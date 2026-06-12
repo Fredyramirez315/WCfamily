@@ -304,7 +304,15 @@
     }
 
     function genUID() { return "wc26_" + Math.random().toString(36).slice(2,9); }
-    function isToday(dateStr) { return new Date().toISOString().split("T")[0] === dateStr; }
+    function isToday(dateStr) {
+      // Compare against Central Time (CT = CDT during tournament = UTC-5)
+      // Using toLocaleString with Chicago timezone is safe cross-browser
+      const nowCT = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Chicago" }));
+      const y = nowCT.getFullYear();
+      const m = String(nowCT.getMonth() + 1).padStart(2, "0");
+      const d = String(nowCT.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}` === dateStr;
+    }
 
     // Parse "2026-06-12" + "8:00 PM" CT into a JS Date (CT = UTC-5 standard, UTC-6 daylight — June = CDT = UTC-5)
     function matchKickoffDate(match) {
