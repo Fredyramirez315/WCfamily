@@ -1199,8 +1199,135 @@
       );
     }
 
+    // ─── USER PREDICTIONS MODAL ───
+    function UserPredictionsModal({ user, matches, predictions, t, onClose }) {
+      const upred = predictions?.[user.uid] || {};
+
+      // Only show predictions for matches that have kicked off (locked)
+      // Hidden until kickoff rule: isPredictionLocked() returns true once kickoff time passes
+      const visibleMatches = matches
+        .filter(m => isPredictionLocked(m))
+        .sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+
+      const totalPred = visibleMatches.filter(m => {
+        const p = upred[m.id];
+        return p && p.homeScore !== null && p.homeScore !== undefined;
+      }).length;
+
+      let pts = 0, exact = 0, correct = 0;
+      visibleMatches.forEach(m => {
+        const p = calcMatchPoints(m, upred[m.id]);
+        if (p !== null) { pts += p; if (p===3) exact++; else if (p===1) correct++; }
+      });
+
+      // Group by date
+      const byDate = {};
+      visibleMatches.forEach(m => {
+        if (!byDate[m.date]) byDate[m.date] = [];
+        byDate[m.date].push(m);
+      });
+      const sortedDates = Object.keys(byDate).sort();
+
+      return (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:1000,display:"flex",flexDirection:"column",fontFamily:"'Outfit',sans-serif"}}>
+          {/* Header */}
+          <div style={{background:"#0d1018",borderBottom:"1px solid #1e2230",padding:"12px 16px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+            <button onClick={onClose} style={{background:"transparent",border:"1px solid #1e2230",borderRadius:8,color:"#7a8090",cursor:"pointer",padding:"4px 10px",fontSize:"0.8rem"}}>← Back</button>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",color:"#facc15",letterSpacing:"0.06em"}}>
+                🔮 {user.name}'s Predictions
+              </div>
+              <div style={{fontSize:"0.62rem",color:"#5a6070",marginTop:1}}>
+                {totalPred} predictions · {exact}🏅 exact · {correct}✓ result · {pts} pts
+              </div>
+            </div>
+          </div>
+
+          {/* Privacy notice */}
+          <div style={{padding:"8px 16px",background:"rgba(167,139,250,0.06)",borderBottom:"1px solid #1e2230",flexShrink:0}}>
+            <div style={{fontSize:"0.62rem",color:"#a78bfa"}}>🔒 Only showing predictions for matches that have kicked off</div>
+          </div>
+
+          {/* Match list */}
+          <div style={{flex:1,overflowY:"auto",padding:"12px 16px"}}>
+            {sortedDates.length === 0 && (
+              <div style={{textAlign:"center",color:"#3a4050",padding:"3rem",fontSize:"0.82rem"}}>
+                No kicked-off matches yet — check back once games begin
+              </div>
+            )}
+            {sortedDates.map(dateStr => {
+              const dOptions = { weekday:"short", month:"short", day:"numeric" };
+              const cleanDate = new Date(dateStr+"T12:00:00").toLocaleDateString("en-US", dOptions);
+              return (
+                <div key={dateStr} style={{marginBottom:16}}>
+                  <div style={{fontSize:"0.68rem",fontWeight:700,color:"#facc15",letterSpacing:"0.06em",marginBottom:7,paddingBottom:4,borderBottom:"1px solid #1e2230"}}>
+                    📅 {cleanDate}
+                  </div>
+                  {byDate[dateStr].map(m => {
+                    const pred = upred[m.id];
+                    const hasPred = pred && pred.homeScore !== null && pred.homeScore !== undefined;
+                    const hasScore = m.homeScore !== null && m.awayScore !== null;
+                    const pts = calcMatchPoints(m, pred);
+                    const v = VENUES.find(v => v.id === m.venueId);
+
+                    let ptsBadge = null;
+                    if (pts === 3) ptsBadge = { label:"⚽ Exact! +3", color:"#4ade80", bg:"rgba(74,222,128,0.1)" };
+                    else if (pts === 1) ptsBadge = { label:"✓ Result +1", color:"#facc15", bg:"rgba(250,204,21,0.08)" };
+                    else if (pts === 0) ptsBadge = { label:"✗ Wrong", color:"#f87171", bg:"rgba(248,113,113,0.08)" };
+
+                    return (
+                      <div key={m.id} style={{background:"#141720",border:"1px solid #1e2230",borderRadius:12,padding:"10px 12px",marginBottom:6}}>
+                        {/* Match header */}
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:"0.62rem",color:"#5a6070"}}>
+                          <span>Group {m.group} · MD{m.matchday}</span>
+                          <span>{m.time} CT</span>
+                        </div>
+                        {/* Teams + scores */}
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                          <div style={{flex:1,textAlign:"center"}}>
+                            <Flag team={m.home} />
+                            <div style={{fontSize:"0.68rem",fontWeight:700,color:"#f0f4ff",marginTop:2,lineHeight:1.2}}>{m.home}</div>
+                          </div>
+                          <div style={{textAlign:"center",minWidth:80}}>
+                            {/* Official result */}
+                            {hasScore
+                              ? <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.5rem",color:"#facc15",lineHeight:1}}>{m.homeScore} – {m.awayScore}</div>
+                              : <div style={{fontSize:"0.75rem",color:"#3a4050",fontWeight:700}}>In progress</div>
+                            }
+                            {/* Their prediction */}
+                            {hasPred
+                              ? <div style={{fontSize:"0.65rem",color:"#a78bfa",marginTop:2}}>🔮 {pred.homeScore}–{pred.awayScore}</div>
+                              : <div style={{fontSize:"0.62rem",color:"#3a4050",marginTop:2}}>No pick</div>
+                            }
+                          </div>
+                          <div style={{flex:1,textAlign:"center"}}>
+                            <Flag team={m.away} />
+                            <div style={{fontSize:"0.68rem",fontWeight:700,color:"#f0f4ff",marginTop:2,lineHeight:1.2}}>{m.away}</div>
+                          </div>
+                        </div>
+                        {/* Points badge */}
+                        {ptsBadge && (
+                          <div style={{textAlign:"center",padding:"3px 8px",background:ptsBadge.bg,borderRadius:6,fontSize:"0.62rem",fontWeight:700,color:ptsBadge.color}}>
+                            {ptsBadge.label}
+                          </div>
+                        )}
+                        {/* Venue */}
+                        <div style={{fontSize:"0.58rem",color:"#3a4050",textAlign:"center",marginTop:5}}>{v?.fifaName} · {v?.city}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
     // ─── LEADERBOARD TAB ───
     function LeaderboardTab({ t, users, matches, predictions }) {
+      const [selectedUser, setSelectedUser] = useState(null);
+
       const calculated = Object.values(users || {}).map(u => {
         let score = 0; let exact = 0; let correct = 0; let count = 0;
         const upred = predictions?.[u.uid] || {};
@@ -1215,14 +1342,30 @@
 
       const medals = ["🥇","🥈","🥉"];
 
+      // Count locked predictions visible to others
+      const lockedMatchCount = matches.filter(m => isPredictionLocked(m)).length;
+
       return (
         <div style={{paddingBottom:80}}>
+          {/* Predictions modal */}
+          {selectedUser && (
+            <UserPredictionsModal
+              user={selectedUser}
+              matches={matches}
+              predictions={predictions}
+              t={t}
+              onClose={()=>setSelectedUser(null)} />
+          )}
+
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"#facc15",marginBottom:4}}>LEADERBOARD</div>
-          <div style={{fontSize:"0.62rem",color:"#5a6070",marginBottom:12}}>Exact score = 3pts · Correct result = 1pt</div>
+          <div style={{fontSize:"0.62rem",color:"#5a6070",marginBottom:12}}>
+            Exact score = 3pts · Correct result = 1pt · Tap a player to see their picks
+          </div>
           {calculated.map((u, idx) => {
             const isFirst = idx === 0;
             return (
-              <div key={u.uid} style={{background: isFirst?"rgba(250,204,21,0.06)":"#141720",border:`1px solid ${isFirst?"rgba(250,204,21,0.3)":"#1e2230"}`,borderRadius:12,padding:"10px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:10}}>
+              <button key={u.uid} onClick={()=>setSelectedUser(u)}
+                style={{width:"100%",background: isFirst?"rgba(250,204,21,0.06)":"#141720",border:`1px solid ${isFirst?"rgba(250,204,21,0.3)":"#1e2230"}`,borderRadius:12,padding:"10px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"#facc15",width:28,textAlign:"center"}}>{medals[idx]||idx+1}</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:"0.82rem",color:"#f0f4ff"}}>
@@ -1245,12 +1388,18 @@
                 <div style={{textAlign:"right"}}>
                   <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.6rem",color:"#facc15",lineHeight:1}}>{u.score}</div>
                   <div style={{fontSize:"0.52rem",color:"#5a6070"}}>{t.pts.toUpperCase()}</div>
+                  <div style={{fontSize:"0.5rem",color:"#a78bfa",marginTop:2}}>🔮 view picks</div>
                 </div>
-              </div>
+              </button>
             );
           })}
           {calculated.length === 0 && (
             <div style={{textAlign:"center",color:"#3a4050",padding:"2rem",fontSize:"0.8rem"}}>No predictions yet</div>
+          )}
+          {lockedMatchCount > 0 && (
+            <div style={{fontSize:"0.6rem",color:"#3a4050",textAlign:"center",marginTop:8}}>
+              🔒 Predictions visible only after each match kicks off
+            </div>
           )}
         </div>
       );
