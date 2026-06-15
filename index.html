@@ -884,7 +884,6 @@
 
     // ─── SCHEDULE TAB ───
     function ScheduleTab({ t, matches, profile, predictions, users, onScoreModal, onPredictModal, venueFilter, onClearVenueFilter }) {
-      const [filter, setFilter] = useState("all");
       const [teamSearch, setTeamSearch] = useState("");
       const [selectedTeam, setSelectedTeam] = useState(null);
       const [pastOpen, setPastOpen] = useState(false);
@@ -912,11 +911,7 @@
         ? matches.filter(m => m.venueId === venueFilter)
         : selectedTeam
           ? matches.filter(m => m.home === selectedTeam || m.away === selectedTeam)
-          : matches.filter(m => {
-              if (filter === "today") return isToday(m.date);
-              if (filter === "fav") return favTeams.includes(m.home) || favTeams.includes(m.away);
-              return true;
-            });
+          : matches;
 
       const matchesByDate = {};
       filtered.forEach(m => {
@@ -1012,16 +1007,6 @@
             </div>
           )}
 
-          {/* Filter buttons — hidden when team or venue selected */}
-          {!selectedTeam && !venueFilter && (
-            <div style={{display:"flex",gap:6,marginBottom:12}}>
-              {["all", "today", "fav"].map(f => (
-                <button key={f} onClick={()=>setFilter(f)} style={{flex:1,padding:"8px",borderRadius:8,border:"none",background:filter===f?"#facc15":"#141720",color:filter===f?"#000":"#7a8090",fontSize:"0.68rem",fontWeight:700,cursor:"pointer"}}>
-                  {f === "all" ? "ALL" : f === "today" ? "TODAY" : "⭐ FAVS"}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Match list — split into upcoming and past */}
           {(() => {
