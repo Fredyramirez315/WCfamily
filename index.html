@@ -837,11 +837,59 @@
       );
     }
 
+    // ─── COMPACT PAST MATCH ROW ───
+    function PastMatchRow({ match, userPred, profile }) {
+      const pts = calcMatchPoints(match, userPred);
+      const hasPred = userPred?.homeScore !== undefined && userPred?.homeScore !== null;
+      const favTeams = profile?.favorites || [];
+      const myTeam = favTeams.find(ft => ft === match.home || ft === match.away);
+      let resultColor = null;
+      if (myTeam) {
+        const isHome = myTeam === match.home;
+        const myScore = isHome ? match.homeScore : match.awayScore;
+        const oppScore = isHome ? match.awayScore : match.homeScore;
+        if (myScore > oppScore) resultColor = "#4ade80";
+        else if (myScore === oppScore) resultColor = "#facc15";
+        else resultColor = "#f87171";
+      }
+      return (
+        <div style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderBottom:"1px solid #0d1018",fontSize:"0.7rem"}}>
+          {/* Home team */}
+          <div style={{flex:1,display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",minWidth:0}}>
+            <span style={{color:"#9aa0b0",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{match.home}</span>
+            <Flag team={match.home}/>
+          </div>
+          {/* Score */}
+          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",color: resultColor || "#facc15",lineHeight:1,textAlign:"center",minWidth:44,flexShrink:0}}>
+            {match.homeScore}–{match.awayScore}
+          </div>
+          {/* Away team */}
+          <div style={{flex:1,display:"flex",alignItems:"center",gap:4,minWidth:0}}>
+            <Flag team={match.away}/>
+            <span style={{color:"#9aa0b0",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{match.away}</span>
+          </div>
+          {/* Prediction + points */}
+          <div style={{minWidth:54,textAlign:"right",flexShrink:0}}>
+            {hasPred
+              ? <span style={{fontSize:"0.65rem",color:"#a78bfa"}}>
+                  🔮{userPred.homeScore}–{userPred.awayScore}
+                  {pts !== null && <span style={{marginLeft:2,fontWeight:800,color:pts===3?"#4ade80":pts===1?"#facc15":"#f87171"}}> +{pts}</span>}
+                </span>
+              : <span style={{fontSize:"0.62rem",color:"#3a4050"}}>—</span>
+            }
+          </div>
+        </div>
+      );
+    }
+
     // ─── SCHEDULE TAB ───
     function ScheduleTab({ t, matches, profile, predictions, users, onScoreModal, onPredictModal, venueFilter, onClearVenueFilter }) {
       const [filter, setFilter] = useState("all");
       const [teamSearch, setTeamSearch] = useState("");
       const [selectedTeam, setSelectedTeam] = useState(null);
+      const [pastOpen, setPastOpen] = useState(false);
+      const [openDates, setOpenDates] = useState({});
+      const toggleDate = (d) => setOpenDates(prev => ({ ...prev, [d]: !prev[d] }));
 
       // If a venue filter arrives, clear team search so they don't conflict
       useEffect(() => {
@@ -882,9 +930,6 @@
         ? Object.entries(GROUPS).find(([, teams]) => teams.includes(selectedTeam))?.[0]
         : null;
 
-      // Today's matches sticky section
-      const todayMatches = matches.filter(m => isToday(m.date));
-
       return (
         <div style={{paddingBottom:80}}>
 
@@ -902,20 +947,6 @@
                   <div style={{fontSize:"0.65rem",color:"#5a6070",marginTop:1}}>{selectedVenue.realName} · {selectedVenue.city} · {filtered.length} match{filtered.length!==1?"es":""}</div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* TODAY STICKY SECTION */}
-          {todayMatches.length > 0 && !selectedTeam && !venueFilter && filter !== "today" && (
-            <div style={{background:"rgba(239,68,68,0.06)",border:"1px solid rgba(239,68,68,0.25)",borderRadius:12,padding:"10px 12px",marginBottom:12}}>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"#ef4444",letterSpacing:"0.06em",marginBottom:8}}>📺 {t.todayMatches}</div>
-              {todayMatches.map(m => (
-                <MatchCard key={m.id} match={m} profile={profile} t={t}
-                  isFav={favTeams.includes(m.home)||favTeams.includes(m.away)}
-                  userPred={predictions?.[profile?.uid]?.[m.id]}
-                  onScore={()=>onScoreModal(m)} onPredict={()=>onPredictModal(m)}
-                  predictions={predictions} users={users} showPredSummary={true} />
-              ))}
             </div>
           )}
 
@@ -992,29 +1023,85 @@
             </div>
           )}
 
-          {/* Match list */}
-          {sortedDates.length === 0
-            ? <div style={{textAlign:"center",color:"#3a4050",padding:"2rem",fontSize:"0.8rem"}}>{t.noMatches}</div>
-            : sortedDates.map(dateStr => {
-                const dOptions = { weekday:"long", month:"short", day:"numeric", year:"numeric" };
-                const cleanDate = new Date(dateStr + "T12:00:00").toLocaleDateString(profile?.lang || "en", dOptions);
-                return (
-                  <div key={dateStr} style={{marginBottom:20}}>
-                    <div style={{fontSize:"0.85rem",fontWeight:800,color:"#facc15",padding:"4px 8px",background:"rgba(250,204,21,0.08)",borderRadius:6,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>
-                      📅 {cleanDate}
+          {/* Match list — split into upcoming and past */}
+          {(() => {
+            const upcomingDates = sortedDates.filter(d => matchesByDate[d].some(m => matchStatus(m) !== "finished"));
+            const pastMatches = filtered.filter(m => matchStatus(m) === "finished").sort((a,b) => new Date(b.date+b.time) - new Date(a.date+a.time));
+
+            return (
+              <>
+                {/* Upcoming matches */}
+                {upcomingDates.length === 0 && pastMatches.length === 0 &&
+                  <div style={{textAlign:"center",color:"#3a4050",padding:"2rem",fontSize:"0.8rem"}}>{t.noMatches}</div>
+                }
+                {upcomingDates.map(dateStr => {
+                  const upcomingInDay = matchesByDate[dateStr].filter(m => matchStatus(m) !== "finished");
+                  if (upcomingInDay.length === 0) return null;
+                  const isDateToday = isToday(dateStr);
+                  const isOpen = isDateToday || !!openDates[dateStr];
+                  const dOptions = { weekday:"long", month:"short", day:"numeric", year:"numeric" };
+                  const cleanDate = new Date(dateStr + "T12:00:00").toLocaleDateString(profile?.lang || "en", dOptions);
+                  const hasFav = upcomingInDay.some(m => favTeams.includes(m.home) || favTeams.includes(m.away));
+                  return (
+                    <div key={dateStr} style={{marginBottom:6}}>
+                      <button onClick={() => !isDateToday && toggleDate(dateStr)}
+                        style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+                          background: isDateToday ? "rgba(239,68,68,0.08)" : "rgba(250,204,21,0.05)",
+                          border: `1px solid ${isDateToday ? "rgba(239,68,68,0.3)" : "#1e2230"}`,
+                          borderRadius: isOpen ? "10px 10px 0 0" : 10,
+                          padding:"9px 12px",cursor: isDateToday ? "default" : "pointer",marginBottom:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:"0.8rem",fontWeight:800,color: isDateToday ? "#ef4444" : "#facc15",textTransform:"uppercase",letterSpacing:"0.04em"}}>
+                            {isDateToday ? "📺 TODAY" : `📅 ${cleanDate}`}
+                          </span>
+                          {hasFav && !isDateToday && <span style={{fontSize:"0.6rem",color:"#facc15"}}>⭐</span>}
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:"0.62rem",color:"#5a6070"}}>{upcomingInDay.length} match{upcomingInDay.length!==1?"es":""}</span>
+                          {!isDateToday && <span style={{fontSize:"0.8rem",color:"#5a6070",transition:"transform 0.2s",display:"inline-block",transform: isOpen ? "rotate(180deg)" : "rotate(0deg)"}}>▾</span>}
+                        </div>
+                      </button>
+                      {isOpen && (
+                        <div style={{border:"1px solid #1e2230",borderTop:"none",borderRadius:"0 0 10px 10px",padding:"8px 0 4px 0",marginBottom:10}}>
+                          {upcomingInDay.map(m => (
+                            <MatchCard key={m.id} match={m} profile={profile} t={t}
+                              isFav={favTeams.includes(m.home) || favTeams.includes(m.away)}
+                              userPred={predictions?.[profile?.uid]?.[m.id]}
+                              onScore={() => onScoreModal(m)}
+                              onPredict={() => onPredictModal(m)}
+                              predictions={predictions} users={users} showPredSummary={true} />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {matchesByDate[dateStr].map(m => (
-                      <MatchCard key={m.id} match={m} profile={profile} t={t}
-                        isFav={favTeams.includes(m.home) || favTeams.includes(m.away)}
-                        userPred={predictions?.[profile?.uid]?.[m.id]}
-                        onScore={() => onScoreModal(m)}
-                        onPredict={() => onPredictModal(m)}
-                        predictions={predictions} users={users} showPredSummary={true} />
-                    ))}
+                  );
+                })}
+
+                {/* Past matches collapsible section */}
+                {pastMatches.length > 0 && (
+                  <div style={{marginTop:8}}>
+                    <button onClick={() => setPastOpen(o => !o)}
+                      style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",background:"#10131c",border:"1px solid #1e2230",borderRadius: pastOpen ? "12px 12px 0 0" : 12,padding:"10px 14px",cursor:"pointer",color:"#7a8090"}}>
+                      <span style={{fontSize:"0.75rem",fontWeight:800,letterSpacing:"0.05em"}}>
+                        ⏮ PAST MATCHES ({pastMatches.length})
+                      </span>
+                      <span style={{fontSize:"0.8rem",transition:"transform 0.2s",display:"inline-block",transform: pastOpen ? "rotate(180deg)" : "rotate(0deg)"}}>▾</span>
+                    </button>
+                    {pastOpen && (
+                      <div style={{background:"#10131c",border:"1px solid #1e2230",borderTop:"none",borderRadius:"0 0 12px 12px",overflow:"hidden",marginBottom:16}}>
+                        {pastMatches.map(m => (
+                          <PastMatchRow key={m.id} match={m}
+                            userPred={predictions?.[profile?.uid]?.[m.id]}
+                            profile={profile} />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                );
-              })
-          }
+                )}
+              </>
+            );
+          })()}
+
         </div>
       );
     }
