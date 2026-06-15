@@ -331,10 +331,11 @@
       const now = new Date();
       const kickoff = matchKickoffDate(match);
       if (!kickoff) return "upcoming";
+      if (now < kickoff) return "upcoming";
+      const minutesElapsed = (now - kickoff) / 60000;
       const hasScore = match.homeScore !== null && match.awayScore !== null;
-      if (hasScore) return "finished";
-      if (now >= kickoff) return "live";
-      return "upcoming";
+      if (hasScore && minutesElapsed >= 120) return "finished";
+      return "live";
     }
 
     function isPredictionLocked(match) {
@@ -1010,8 +1011,8 @@
 
           {/* Match list — split into upcoming and past */}
           {(() => {
-            const upcomingDates = sortedDates.filter(d => matchesByDate[d].some(m => matchStatus(m) !== "finished"));
-            const pastMatches = filtered.filter(m => matchStatus(m) === "finished").sort((a,b) => new Date(b.date+b.time) - new Date(a.date+a.time));
+            const upcomingDates = sortedDates.filter(d => isToday(d) ? matchesByDate[d].length > 0 : matchesByDate[d].some(m => matchStatus(m) !== "finished"));
+            const pastMatches = filtered.filter(m => matchStatus(m) === "finished" && !isToday(m.date)).sort((a,b) => new Date(b.date+b.time) - new Date(a.date+a.time));
 
             return (
               <>
@@ -1020,9 +1021,16 @@
                   <div style={{textAlign:"center",color:"#3a4050",padding:"2rem",fontSize:"0.8rem"}}>{t.noMatches}</div>
                 }
                 {upcomingDates.map(dateStr => {
-                  const upcomingInDay = matchesByDate[dateStr].filter(m => matchStatus(m) !== "finished");
-                  if (upcomingInDay.length === 0) return null;
                   const isDateToday = isToday(dateStr);
+                  const upcomingInDay = isDateToday
+                    ? [...matchesByDate[dateStr]].sort((a, b) => {
+                        const order = { live: 0, upcoming: 1, finished: 2 };
+                        const sa = order[matchStatus(a)], sb = order[matchStatus(b)];
+                        if (sa !== sb) return sa - sb;
+                        return a.time.localeCompare(b.time);
+                      })
+                    : matchesByDate[dateStr].filter(m => matchStatus(m) !== "finished");
+                  if (upcomingInDay.length === 0) return null;
                   const isOpen = isDateToday || !!openDates[dateStr];
                   const dOptions = { weekday:"long", month:"short", day:"numeric", year:"numeric" };
                   const cleanDate = new Date(dateStr + "T12:00:00").toLocaleDateString(profile?.lang || "en", dOptions);
