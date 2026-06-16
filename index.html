@@ -839,7 +839,7 @@
     }
 
     // ─── COMPACT PAST MATCH ROW ───
-    function PastMatchRow({ match, userPred, profile }) {
+    function PastMatchRow({ match, userPred, profile, onScore, t }) {
       const pts = calcMatchPoints(match, userPred);
       const hasPred = userPred?.homeScore !== undefined && userPred?.homeScore !== null;
       const favTeams = profile?.favorites || [];
@@ -879,6 +879,13 @@
               : <span style={{fontSize:"0.62rem",color:"#3a4050"}}>—</span>
             }
           </div>
+          {/* Admin edit button */}
+          {profile?.isAdmin && (
+            <button onClick={onScore} title={t?.editScore || "Edit Score"}
+              style={{flexShrink:0,padding:"3px 6px",background:"transparent",border:"1px solid rgba(250,204,21,0.3)",borderRadius:6,color:"#facc15",fontSize:"0.62rem",fontWeight:700,cursor:"pointer"}}>
+              ✏️
+            </button>
+          )}
         </div>
       );
     }
@@ -1085,7 +1092,8 @@
                         {pastMatches.map(m => (
                           <PastMatchRow key={m.id} match={m}
                             userPred={predictions?.[profile?.uid]?.[m.id]}
-                            profile={profile} />
+                            profile={profile} t={t}
+                            onScore={() => onScoreModal(m)} />
                         ))}
                       </div>
                     )}
