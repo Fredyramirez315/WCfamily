@@ -7,7 +7,7 @@
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -1019,7 +1019,7 @@
           {/* Match list — split into upcoming and past */}
           {(() => {
             const upcomingDates = sortedDates.filter(d => isToday(d) ? matchesByDate[d].length > 0 : matchesByDate[d].some(m => matchStatus(m) !== "finished"));
-            const pastMatches = filtered.filter(m => matchStatus(m) === "finished" && !isToday(m.date)).sort((a,b) => new Date(b.date+b.time) - new Date(a.date+a.time));
+            const pastMatches = filtered.filter(m => matchStatus(m) === "finished" && !isToday(m.date)).sort((a,b) => matchKickoffDate(b) - matchKickoffDate(a));
 
             return (
               <>
@@ -1034,7 +1034,7 @@
                         const order = { live: 0, upcoming: 1, finished: 2 };
                         const sa = order[matchStatus(a)], sb = order[matchStatus(b)];
                         if (sa !== sb) return sa - sb;
-                        return a.time.localeCompare(b.time);
+                        return matchKickoffDate(a) - matchKickoffDate(b);
                       })
                     : matchesByDate[dateStr].filter(m => matchStatus(m) !== "finished");
                   if (upcomingInDay.length === 0) return null;
@@ -1295,7 +1295,7 @@
       // Hidden until kickoff rule: isPredictionLocked() returns true once kickoff time passes
       const visibleMatches = matches
         .filter(m => isPredictionLocked(m))
-        .sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+        .sort((a,b) => matchKickoffDate(a) - matchKickoffDate(b));
 
       const totalPred = visibleMatches.filter(m => {
         const p = upred[m.id];
