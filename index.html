@@ -11,6 +11,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
   <style>
     body { margin: 0; background-color: #080b12; color: #f0f4ff; font-family: 'Outfit', sans-serif; }
@@ -77,6 +78,9 @@
       window.firebase.initializeApp(FIREBASE_CONFIG);
     }
     const db = window.firebase ? window.firebase.database() : null;
+    const authReady = window.firebase
+      ? window.firebase.auth().signInAnonymously().catch(err => console.warn("Anonymous sign-in failed:", err))
+      : Promise.resolve();
 
     function fbRef(path) { return db?.ref(path); }
     function fbSet(path, value) { return db?.ref(path).set(value); }
@@ -1579,37 +1583,40 @@
 
       useEffect(() => {
         if (!db) return;
+        let mRef, uRef, pRef;
 
-        const mRef = fbRef("matches");
-        mRef.on("value", snap => {
-          if (snap.exists()) {
-            const serverData = snap.val();
-            setMatches(prev => prev.map(m => serverData[m.id] ? { ...m, ...serverData[m.id] } : m));
-          }
+        authReady.then(() => {
+          mRef = fbRef("matches");
+          mRef.on("value", snap => {
+            if (snap.exists()) {
+              const serverData = snap.val();
+              setMatches(prev => prev.map(m => serverData[m.id] ? { ...m, ...serverData[m.id] } : m));
+            }
+          });
+
+          uRef = fbRef("users");
+          uRef.on("value", snap => {
+            const allUsers = snap.exists() ? snap.val() : {};
+            setUsers(allUsers);
+            
+            const params = new URLSearchParams(window.location.search);
+            const urlUid = params.get("uid");
+            const localUid = localStorage.getItem("wc26_uid");
+            const activeUid = urlUid || localUid;
+
+            if (activeUid && allUsers[activeUid]) {
+              setProfile(allUsers[activeUid]);
+              if (urlUid) localStorage.setItem("wc26_uid", urlUid);
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            setLoadingSession(false);
+          });
+
+          pRef = fbRef("predictions");
+          pRef.on("value", snap => { if (snap.exists()) setPredictions(snap.val()); });
         });
 
-        const uRef = fbRef("users");
-        uRef.on("value", snap => {
-          const allUsers = snap.exists() ? snap.val() : {};
-          setUsers(allUsers);
-          
-          const params = new URLSearchParams(window.location.search);
-          const urlUid = params.get("uid");
-          const localUid = localStorage.getItem("wc26_uid");
-          const activeUid = urlUid || localUid;
-
-          if (activeUid && allUsers[activeUid]) {
-            setProfile(allUsers[activeUid]);
-            if (urlUid) localStorage.setItem("wc26_uid", urlUid);
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
-          setLoadingSession(false);
-        });
-
-        const pRef = fbRef("predictions");
-        pRef.on("value", snap => { if (snap.exists()) setPredictions(snap.val()); });
-
-        return () => { mRef.off(); uRef.off(); pRef.off(); };
+        return () => { mRef?.off(); uRef?.off(); pRef?.off(); };
       }, []);
 
       const handleOnboardComplete = (prof) => {
