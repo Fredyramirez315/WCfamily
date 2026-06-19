@@ -243,8 +243,8 @@
       {id:28, group:"A", home:"Mexico",                away:"South Korea",         date:"2026-06-18", time:"8:00 PM",  venueId:"gdl", matchday:2, homeScore:null, awayScore:null},
       // ── JUNE 19 (Friday) ──
       {id:29, group:"D", home:"USA",                   away:"Australia",           date:"2026-06-19", time:"2:00 PM",  venueId:"sea", matchday:2, homeScore:null, awayScore:null},
-      {id:30, group:"C", home:"Scotland",              away:"Morocco",             date:"2026-06-19", time:"2:00 PM",  venueId:"bos", matchday:2, homeScore:null, awayScore:null},
-      {id:31, group:"C", home:"Brazil",                away:"Haiti",               date:"2026-06-19", time:"8:00 PM",  venueId:"phi", matchday:2, homeScore:null, awayScore:null},
+      {id:30, group:"C", home:"Scotland",              away:"Morocco",             date:"2026-06-19", time:"5:00 PM",  venueId:"bos", matchday:2, homeScore:null, awayScore:null},
+      {id:31, group:"C", home:"Brazil",                away:"Haiti",               date:"2026-06-19", time:"7:30 PM",  venueId:"phi", matchday:2, homeScore:null, awayScore:null},
       {id:32, group:"D", home:"Türkiye",               away:"Paraguay",            date:"2026-06-19", time:"11:00 PM", venueId:"sf",  matchday:2, homeScore:null, awayScore:null},
       // ── JUNE 20 (Saturday) ──
       {id:33, group:"F", home:"Netherlands",           away:"Sweden",              date:"2026-06-20", time:"12:00 PM", venueId:"hou", matchday:2, homeScore:null, awayScore:null},
@@ -1569,6 +1569,7 @@
     function App() {
       const [profile, setProfile] = useState(null);
       const [loadingSession, setLoadingSession] = useState(true);
+      const [cloudError, setCloudError] = useState(null);
       const [tab, setTab] = useState("schedule");
       const [matches, setMatches] = useState(BASE_MATCHES);
       const [users, setUsers] = useState({});
@@ -1582,41 +1583,78 @@
       const t = T[profile?.lang || "en"];
 
       useEffect(() => {
-        if (!db) return;
+        if (!db) { setCloudError("Firebase SDK failed to load."); setLoadingSession(false); return; }
         let mRef, uRef, pRef;
+        let settled = false;
+
+        // Safety net: if auth/connection never settles (blocked network, hung
+        // promise, etc.), stop showing the spinner after 10s instead of hanging forever.
+        const failSafe = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            setCloudError("Connection to the server timed out. Check your internet connection and try again.");
+            setLoadingSession(false);
+          }
+        }, 10000);
 
         authReady.then(() => {
           mRef = fbRef("matches");
-          mRef.on("value", snap => {
-            if (snap.exists()) {
-              const serverData = snap.val();
-              setMatches(prev => prev.map(m => serverData[m.id] ? { ...m, ...serverData[m.id] } : m));
-            }
-          });
+          mRef.on("value",
+            snap => {
+              if (snap.exists()) {
+                const serverData = snap.val();
+                setMatches(prev => prev.map(m => serverData[m.id] ? { ...m, ...serverData[m.id] } : m));
+              }
+            },
+            err => console.warn("matches listener error:", err)
+          );
 
           uRef = fbRef("users");
-          uRef.on("value", snap => {
-            const allUsers = snap.exists() ? snap.val() : {};
-            setUsers(allUsers);
-            
-            const params = new URLSearchParams(window.location.search);
-            const urlUid = params.get("uid");
-            const localUid = localStorage.getItem("wc26_uid");
-            const activeUid = urlUid || localUid;
+          uRef.on("value",
+            snap => {
+              clearTimeout(failSafe);
+              settled = true;
+              const allUsers = snap.exists() ? snap.val() : {};
+              setUsers(allUsers);
 
-            if (activeUid && allUsers[activeUid]) {
-              setProfile(allUsers[activeUid]);
-              if (urlUid) localStorage.setItem("wc26_uid", urlUid);
-              window.history.replaceState({}, document.title, window.location.pathname);
+              const params = new URLSearchParams(window.location.search);
+              const urlUid = params.get("uid");
+              const localUid = localStorage.getItem("wc26_uid");
+              const activeUid = urlUid || localUid;
+
+              if (activeUid && allUsers[activeUid]) {
+                setProfile(allUsers[activeUid]);
+                if (urlUid) localStorage.setItem("wc26_uid", urlUid);
+                window.history.replaceState({}, document.title, window.location.pathname);
+              }
+              setCloudError(null);
+              setLoadingSession(false);
+            },
+            err => {
+              clearTimeout(failSafe);
+              settled = true;
+              console.error("users listener error:", err);
+              setCloudError(err?.code === "PERMISSION_DENIED"
+                ? "Couldn't connect to the database (permission denied). This usually means anonymous sign-in failed or DB rules changed."
+                : `Couldn't connect to the database: ${err?.message || err}`);
+              setLoadingSession(false);
             }
-            setLoadingSession(false);
-          });
+          );
 
           pRef = fbRef("predictions");
-          pRef.on("value", snap => { if (snap.exists()) setPredictions(snap.val()); });
+          pRef.on("value",
+            snap => { if (snap.exists()) setPredictions(snap.val()); },
+            err => console.warn("predictions listener error:", err)
+          );
+        }).catch(err => {
+          clearTimeout(failSafe);
+          settled = true;
+          console.error("authReady rejected:", err);
+          setCloudError(`Sign-in failed: ${err?.message || err}`);
+          setLoadingSession(false);
         });
 
-        return () => { mRef?.off(); uRef?.off(); pRef?.off(); };
+        return () => { clearTimeout(failSafe); mRef?.off(); uRef?.off(); pRef?.off(); };
       }, []);
 
       const handleOnboardComplete = (prof) => {
@@ -1648,6 +1686,19 @@
         return (
           <div style={{minHeight:"100vh",background:"#080b12",display:"flex",alignItems:"center",justifyContent:"center",color:"#7a8090"}}>
             ⚡ Restoring Cloud Connection...
+          </div>
+        );
+      }
+
+      if (cloudError) {
+        return (
+          <div style={{minHeight:"100vh",background:"#080b12",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#f0f4ff",padding:24,textAlign:"center",gap:16}}>
+            <div style={{fontSize:"2rem"}}>⚠️</div>
+            <div style={{color:"#ef4444",fontWeight:700,maxWidth:340}}>{cloudError}</div>
+            <button onClick={() => window.location.reload()}
+              style={{padding:"12px 24px",background:"#6366f1",border:"none",borderRadius:10,color:"#fff",fontWeight:700,cursor:"pointer"}}>
+              Retry
+            </button>
           </div>
         );
       }
