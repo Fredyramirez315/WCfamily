@@ -97,6 +97,7 @@
         cancel: "Cancel", noMatches: "No matches found.", leaderboardTitle: "Leaderboard", pts: "pts",
         predictions: "predictions", venues: "Venues", capacity: "seats", knockoutTitle: "Knockout Stage",
         knockoutSub: "Starts June 28 · All QF/SF/Final in USA", bracketPending: "Bracket fills after group stage ends June 27",
+        knockoutPairingRules: "R32 slots for group winners & runners-up are pre-set by FIFA (e.g. Runner-up A vs Runner-up B). Each 3rd-place qualifier's opponent depends on which 5-group combination of third-place teams advances — the official Annex C table (495 possible combinations) determines this once final group standings are known.",
         profileTitle: "My Profile", shareLink: "Share my link", shareLinkHint: "Send this to yourself to access your account on another device",
         copied: "Copied!", editProfile: "Edit Profile", favoriteTeams: "Favorite Teams", language: "Language",
         signOut: "Sign out", groupAdvance: "Top 2 + best 8 third-place advance", yourPrediction: "Your Prediction",
@@ -122,6 +123,7 @@
         cancel: "Cancelar", noMatches: "No se encontraron partidos.", leaderboardTitle: "Clasificación", pts: "pts",
         predictions: "predicciones", venues: "Estadios", capacity: "aforo", knockoutTitle: "Fase Eliminatoria",
         knockoutSub: "Comienza el 28 de junio · QF/SF/Final en EE.UU.", bracketPending: "El cuadro se completa al terminar la fase de grupos el 27 de junio",
+        knockoutPairingRules: "Los cruces de 1°s y 2°s lugares en la Ronda de 32 ya están fijados por la FIFA (ej: 2° A vs 2° B). El rival de cada 3er lugar clasificado depende de qué combinación de 5 grupos avance entre los terceros — la tabla oficial Anexo C (495 combinaciones posibles) lo determina al conocerse la clasificación final de grupos.",
         profileTitle: "Mi Perfil", shareLink: "Compartir mi enlace", shareLinkHint: "Envíatelo para acceder desde otro dispositivo",
         copied: "¡Copiado!", editProfile: "Editar Perfil", favoriteTeams: "Equipos Favoritos", language: "Idioma",
         signOut: "Cerrar sesión", groupAdvance: "Top 2 + mejores 8 terceros avanzan", yourPrediction: "Tu Predicción",
@@ -1170,6 +1172,9 @@
             <div style={{fontSize:"0.7rem",color:"#7a8090",marginTop:3}}>June 28 – July 19 · 32 matches · All QF/SF/Final in USA</div>
             <div style={{marginTop:10,padding:"8px 10px",background:"rgba(250,204,21,0.06)",border:"1px dashed rgba(250,204,21,0.25)",borderRadius:8,fontSize:"0.68rem",color:"#facc15",textAlign:"center"}}>
               ⏳ Teams revealed after group stage ends June 27
+            </div>
+            <div style={{marginTop:8,fontSize:"0.62rem",color:"#5a6070",lineHeight:1.45}}>
+              {t.knockoutPairingRules}
             </div>
           </div>
 
