@@ -960,7 +960,7 @@
           )}
 
           {/* Team search box — hidden when venue filter active */}
-          {!venueFilter && <div style={{position:"relative",marginBottom:10}}>
+          {!venueFilter && <div style={{position:"relative",marginBottom:4}}>
             <div style={{display:"flex",alignItems:"center",background:"#141720",border:"1px solid #1e2230",borderRadius:10,overflow:"visible"}}>
               <span style={{padding:"0 10px",fontSize:"0.85rem",color:"#5a6070"}}>🔍</span>
               <input
@@ -990,7 +990,10 @@
             )}
           </div>}
 
-          {/* Favorite teams quick-links (shown when no search active) */}
+          {/* Timezone note */}
+          {!venueFilter && !selectedTeam && (
+            <div style={{fontSize:"0.58rem",color:"#3a4050",marginBottom:8,marginTop:2}}>🕐 All times shown in Central Time (CT)</div>
+          )}
           {favTeams.length > 0 && !selectedTeam && !venueFilter && teamSearch.length === 0 && (
             <div style={{marginBottom:10}}>
               <div style={{fontSize:"0.6rem",color:"#7a8090",fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>⭐ MY TEAMS — TAP TO FILTER</div>
@@ -1422,7 +1425,7 @@
     }
 
     // ─── LEADERBOARD TAB ───
-    function LeaderboardTab({ t, users, matches, predictions }) {
+    function LeaderboardTab({ t, users, matches, predictions, profile }) {
       const [selectedUser, setSelectedUser] = useState(null);
 
       const calculated = Object.values(users || {}).map(u => {
@@ -1460,9 +1463,10 @@
           </div>
           {calculated.map((u, idx) => {
             const isFirst = idx === 0;
+            const isMe = u.uid === profile?.uid;
             return (
               <button key={u.uid} onClick={()=>setSelectedUser(u)}
-                style={{width:"100%",background: isFirst?"rgba(250,204,21,0.06)":"#141720",border:`1px solid ${isFirst?"rgba(250,204,21,0.3)":"#1e2230"}`,borderRadius:12,padding:"10px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
+                style={{width:"100%",background:isMe?"rgba(99,102,241,0.08)":isFirst?"rgba(250,204,21,0.06)":"#141720",border:`1px solid ${isMe?"rgba(99,102,241,0.5)":isFirst?"rgba(250,204,21,0.3)":"#1e2230"}`,borderRadius:12,padding:"10px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"#facc15",width:28,textAlign:"center"}}>{medals[idx]||idx+1}</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:"0.82rem",color:"#f0f4ff"}}>
@@ -1737,7 +1741,7 @@
           {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} venueFilter={venueFilter} onClearVenueFilter={()=>setVenueFilter(null)} />}
           {tab === "knockout" && <KnockoutTab t={t} />}
           {tab === "venues" && <VenuesTab t={t} matches={matches} onVenueSelect={(vid)=>{ setVenueFilter(vid); setTab("schedule"); }} />}
-          {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} />}
+          {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} profile={profile} />}
           {tab === "me" && <ProfileTab profile={profile} t={t} onUpdateTeams={handleUpdateTeams} />}
 
           <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1018",borderTop:"1px solid #1e2230",display:"flex",zIndex:50}}>
