@@ -97,7 +97,9 @@
         cancel: "Cancel", noMatches: "No matches found.", leaderboardTitle: "Leaderboard", pts: "pts",
         predictions: "predictions", venues: "Venues", capacity: "seats", knockoutTitle: "Knockout Stage",
         knockoutSub: "Starts June 28 · All QF/SF/Final in USA", bracketPending: "Bracket fills after group stage ends June 27",
-        knockoutPairingRules: "R32 slots for group winners & runners-up are pre-set by FIFA (e.g. Runner-up A vs Runner-up B). Each 3rd-place qualifier's opponent depends on which 5-group combination of third-place teams advances — the official Annex C table (495 possible combinations) determines this once final group standings are known.",
+        viewList: "List", viewBracket: "Bracket",
+        enterTeam: "Enter team name", slotSaved: "Saved",
+        thirdPlaceNote: "3rd-place slots locked until June 27 (Annex C draw)",
         profileTitle: "My Profile", shareLink: "Share my link", shareLinkHint: "Send this to yourself to access your account on another device",
         copied: "Copied!", editProfile: "Edit Profile", favoriteTeams: "Favorite Teams", language: "Language",
         signOut: "Sign out", groupAdvance: "Top 2 + best 8 third-place advance", yourPrediction: "Your Prediction",
@@ -123,7 +125,9 @@
         cancel: "Cancelar", noMatches: "No se encontraron partidos.", leaderboardTitle: "Clasificación", pts: "pts",
         predictions: "predicciones", venues: "Estadios", capacity: "aforo", knockoutTitle: "Fase Eliminatoria",
         knockoutSub: "Comienza el 28 de junio · QF/SF/Final en EE.UU.", bracketPending: "El cuadro se completa al terminar la fase de grupos el 27 de junio",
-        knockoutPairingRules: "Los cruces de 1°s y 2°s lugares en la Ronda de 32 ya están fijados por la FIFA (ej: 2° A vs 2° B). El rival de cada 3er lugar clasificado depende de qué combinación de 5 grupos avance entre los terceros — la tabla oficial Anexo C (495 combinaciones posibles) lo determina al conocerse la clasificación final de grupos.",
+        viewList: "Lista", viewBracket: "Cuadro",
+        enterTeam: "Nombre del equipo", slotSaved: "Guardado",
+        thirdPlaceNote: "Casillas de 3ros bloqueadas hasta el 27 de junio (Tabla Anexo C)",
         profileTitle: "Mi Perfil", shareLink: "Compartir mi enlace", shareLinkHint: "Envíatelo para acceder desde otro dispositivo",
         copied: "¡Copiado!", editProfile: "Editar Perfil", favoriteTeams: "Equipos Favoritos", language: "Idioma",
         signOut: "Cerrar sesión", groupAdvance: "Top 2 + mejores 8 terceros avanzan", yourPrediction: "Tu Predicción",
@@ -960,7 +964,7 @@
           )}
 
           {/* Team search box — hidden when venue filter active */}
-          {!venueFilter && <div style={{position:"relative",marginBottom:4}}>
+          {!venueFilter && <div style={{position:"relative",marginBottom:10}}>
             <div style={{display:"flex",alignItems:"center",background:"#141720",border:"1px solid #1e2230",borderRadius:10,overflow:"visible"}}>
               <span style={{padding:"0 10px",fontSize:"0.85rem",color:"#5a6070"}}>🔍</span>
               <input
@@ -990,10 +994,7 @@
             )}
           </div>}
 
-          {/* Timezone note */}
-          {!venueFilter && !selectedTeam && (
-            <div style={{fontSize:"0.58rem",color:"#3a4050",marginBottom:8,marginTop:2}}>🕐 All times shown in Central Time (CT)</div>
-          )}
+          {/* Favorite teams quick-links (shown when no search active) */}
           {favTeams.length > 0 && !selectedTeam && !venueFilter && teamSearch.length === 0 && (
             <div style={{marginBottom:10}}>
               <div style={{fontSize:"0.6rem",color:"#7a8090",fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>⭐ MY TEAMS — TAP TO FILTER</div>
@@ -1165,8 +1166,194 @@
       ]},
     ];
 
-    function KnockoutTab({ t }) {
+    // ─── BRACKET VIEW ───
+    function BracketView({ knockoutSlots, profile, onSaveSlot, t }) {
+      const [editSlot, setEditSlot] = useState(null);
+      const [editVal, setEditVal] = useState("");
+
+      // Layout constants
+      const SLOT_H = 48, BOX_H = 40, GAP = 24;
+      const BW = [120, 116, 116, 112, 112]; // column box widths
+      const CX = [0, BW[0]+GAP, BW[0]+GAP+BW[1]+GAP, BW[0]+GAP+BW[1]+GAP+BW[2]+GAP, BW[0]+GAP+BW[1]+GAP+BW[2]+GAP+BW[3]+GAP];
+      // CX = [0, 144, 284, 424, 560]
+      const totalW = CX[4] + BW[4]; // 672
+      const totalH = 16 * SLOT_H;   // 768
+
+      // Vertical center helpers
+      const r32Ctr = i => i * SLOT_H + BOX_H / 2;
+      const r32Top = i => i * SLOT_H;
+      const r16Ctr = j => 2*j*SLOT_H + 44;
+      const r16Top = j => r16Ctr(j) - BOX_H/2;
+      const qfCtr  = k => 4*k*SLOT_H + 92;
+      const qfTop  = k => qfCtr(k) - BOX_H/2;
+      const sfCtr  = m => 8*m*SLOT_H + 188;
+      const sfTop  = m => sfCtr(m) - BOX_H/2;
+      const finalCtr = 380, finalTop = finalCtr - BOX_H/2;
+
+      // R32 match order top-to-bottom in bracket (derived from bracket tree)
+      const R32_ORDER = [74,77,73,75,83,84,81,82,76,78,79,80,86,88,85,87];
+      const COLORS = ["#60a5fa","#a78bfa","#f59e0b","#f97316","#facc15"];
+
+      // Build lookup for all match definitions
+      const matchDef = {};
+      KNOCKOUT_STRUCTURE.forEach(r => r.matches.forEach(m => { matchDef[m.no] = m; }));
+
+      const isThird  = lbl => lbl && lbl.startsWith("Best 3rd");
+      const isFilled = (no, side) => !!(knockoutSlots?.[`${no}_${side}`]);
+      const getLabel = (no, side) => knockoutSlots?.[`${no}_${side}`] || (side==="home" ? matchDef[no].home : matchDef[no].away);
+
+      const handleTap = (no, side) => {
+        if (!profile?.isAdmin) return;
+        if (isThird(side==="home" ? matchDef[no].home : matchDef[no].away)) return;
+        setEditSlot({ no, side });
+        setEditVal(knockoutSlots?.[`${no}_${side}`] || "");
+      };
+
+      const handleSave = () => {
+        if (!editSlot) return;
+        onSaveSlot(editSlot.no, editSlot.side, editVal.trim());
+        setEditSlot(null); setEditVal("");
+      };
+
+      // SVG connector paths
+      const connPaths = [];
+      const cs = "#2a3040", sw = 1.5;
+      // R32 → R16
+      for (let j=0; j<8; j++) {
+        const rx=CX[0]+BW[0], mx=rx+GAP/2, lx=CX[1], tY=r32Ctr(2*j), bY=r32Ctr(2*j+1), mY=r16Ctr(j);
+        connPaths.push(<path key={`a${j}`} d={`M${rx} ${tY} H${mx} V${mY} H${lx}`} stroke={cs} strokeWidth={sw} fill="none"/>);
+        connPaths.push(<path key={`b${j}`} d={`M${rx} ${bY} H${mx} V${mY}`}          stroke={cs} strokeWidth={sw} fill="none"/>);
+      }
+      // R16 → QF
+      for (let k=0; k<4; k++) {
+        const rx=CX[1]+BW[1], mx=rx+GAP/2, lx=CX[2], tY=r16Ctr(2*k), bY=r16Ctr(2*k+1), mY=qfCtr(k);
+        connPaths.push(<path key={`c${k}`} d={`M${rx} ${tY} H${mx} V${mY} H${lx}`} stroke={cs} strokeWidth={sw} fill="none"/>);
+        connPaths.push(<path key={`d${k}`} d={`M${rx} ${bY} H${mx} V${mY}`}          stroke={cs} strokeWidth={sw} fill="none"/>);
+      }
+      // QF → SF
+      for (let m=0; m<2; m++) {
+        const rx=CX[2]+BW[2], mx=rx+GAP/2, lx=CX[3], tY=qfCtr(2*m), bY=qfCtr(2*m+1), mY=sfCtr(m);
+        connPaths.push(<path key={`e${m}`} d={`M${rx} ${tY} H${mx} V${mY} H${lx}`} stroke={cs} strokeWidth={sw} fill="none"/>);
+        connPaths.push(<path key={`f${m}`} d={`M${rx} ${bY} H${mx} V${mY}`}          stroke={cs} strokeWidth={sw} fill="none"/>);
+      }
+      // SF → Final
+      const rx3=CX[3]+BW[3], mx3=rx3+GAP/2, lx3=CX[4];
+      connPaths.push(<path key="gt" d={`M${rx3} ${sfCtr(0)} H${mx3} V${finalCtr} H${lx3}`} stroke={cs} strokeWidth={sw} fill="none"/>);
+      connPaths.push(<path key="gb" d={`M${rx3} ${sfCtr(1)} H${mx3} V${finalCtr}`}          stroke={cs} strokeWidth={sw} fill="none"/>);
+
+      // Box renderer (render function, not a React component, to avoid nested component issues)
+      const box = (no, x, y, w, color, topLbl, botLbl, topEdit, botEdit, topFill, botFill) => {
+        const anyFill = topFill || botFill;
+        return (
+          <div key={`box-${no}-${x}`} style={{
+            position:"absolute", left:x, top:y, width:w, height:BOX_H,
+            background:"#141720",
+            border:`1px solid ${anyFill?"rgba(250,204,21,0.25)":"#1e2230"}`,
+            borderLeft:`3px solid ${color}`,
+            borderRadius:7,
+            boxSizing:"border-box",
+            display:"flex", flexDirection:"column", justifyContent:"space-between",
+            padding:"3px 5px", overflow:"hidden"
+          }}>
+            <div onClick={()=>topEdit&&handleTap(no,"home")} style={{
+              fontSize:"0.57rem", fontWeight:700, lineHeight:1.2,
+              color: topFill?"#facc15": topEdit?"#e0e4f0":"#4a5060",
+              cursor: topEdit&&profile?.isAdmin?"pointer":"default",
+              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"
+            }}>
+              {topEdit&&profile?.isAdmin&&!topFill?"+ ":""}{topLbl}
+            </div>
+            <div style={{height:"1px", background:"#1e2230"}}/>
+            <div onClick={()=>botEdit&&handleTap(no,"away")} style={{
+              fontSize:"0.57rem", fontWeight:700, lineHeight:1.2,
+              color: botFill?"#facc15": botEdit?"#e0e4f0":"#4a5060",
+              cursor: botEdit&&profile?.isAdmin?"pointer":"default",
+              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"
+            }}>
+              {botEdit&&profile?.isAdmin&&!botFill?"+ ":""}{botLbl}
+            </div>
+          </div>
+        );
+      };
+
+      // R16/QF/SF/Final ordered match numbers for each bracket position
+      const R16_ORDER  = [89,90,93,94,91,92,95,96];
+      const QF_ORDER   = [97,98,99,100];
+      const SF_ORDER   = [101,102];
+
+      return (
+        <div>
+          {/* Edit modal */}
+          {editSlot && (
+            <div style={{background:"#1a1d2e",border:"1px solid #facc15",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              <div style={{fontSize:"0.6rem",color:"#facc15",fontWeight:700,marginBottom:6}}>
+                {t.enterTeam} — M{editSlot.no} ({editSlot.side==="home"?"Home":"Away"})
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <input value={editVal} onChange={e=>setEditVal(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&handleSave()}
+                  placeholder="e.g. Bosnia & Herzegovina" autoFocus
+                  style={{flex:1,padding:"6px 8px",background:"#0d1018",border:"1px solid #2a3040",borderRadius:7,color:"#f0f4ff",fontSize:"0.7rem",outline:"none"}}/>
+                <button onClick={handleSave} style={{padding:"6px 10px",background:"#facc15",border:"none",borderRadius:7,color:"#000",fontWeight:800,fontSize:"0.68rem",cursor:"pointer"}}>✓</button>
+                <button onClick={()=>setEditSlot(null)} style={{padding:"6px 8px",background:"transparent",border:"1px solid #2a3040",borderRadius:7,color:"#7a8090",fontSize:"0.68rem",cursor:"pointer"}}>✕</button>
+              </div>
+            </div>
+          )}
+
+          {/* Bracket scroll container */}
+          <div style={{overflowX:"auto",paddingBottom:8,WebkitOverflowScrolling:"touch"}}>
+            <div style={{position:"relative",width:totalW,height:totalH+24,marginTop:22}}>
+
+              {/* Round labels */}
+              {["R32","R16","QF","SF","FINAL"].map((lbl,i)=>(
+                <div key={lbl} style={{position:"absolute",left:CX[i],top:-18,width:BW[i],textAlign:"center",fontSize:"0.55rem",fontWeight:700,color:COLORS[i],letterSpacing:"0.06em"}}>{lbl}</div>
+              ))}
+
+              {/* SVG connector overlay */}
+              <svg style={{position:"absolute",top:0,left:0,pointerEvents:"none"}} width={totalW} height={totalH}>
+                {connPaths}
+              </svg>
+
+              {/* R32 boxes */}
+              {R32_ORDER.map((no,i)=>{
+                const def = matchDef[no];
+                const hEdit = !isThird(def.home), aEdit = !isThird(def.away);
+                return box(no, CX[0], r32Top(i), BW[0], COLORS[0],
+                  getLabel(no,"home"), getLabel(no,"away"),
+                  hEdit, aEdit, isFilled(no,"home"), isFilled(no,"away"));
+              })}
+
+              {/* R16 boxes */}
+              {R16_ORDER.map((no,j)=>box(no, CX[1], r16Top(j), BW[1], COLORS[1],
+                matchDef[no].home, matchDef[no].away, false, false, false, false))}
+
+              {/* QF boxes */}
+              {QF_ORDER.map((no,k)=>box(no, CX[2], qfTop(k), BW[2], COLORS[2],
+                matchDef[no].home, matchDef[no].away, false, false, false, false))}
+
+              {/* SF boxes */}
+              {SF_ORDER.map((no,m)=>box(no, CX[3], sfTop(m), BW[3], COLORS[3],
+                matchDef[no].home, matchDef[no].away, false, false, false, false))}
+
+              {/* Final box */}
+              {box(104, CX[4], finalTop, BW[4], COLORS[4],
+                matchDef[104].home, matchDef[104].away, false, false, false, false)}
+
+            </div>
+          </div>
+
+          <div style={{fontSize:"0.55rem",color:"#3a4050",textAlign:"center",marginTop:2}}>← scroll →</div>
+          {profile?.isAdmin
+            ? <div style={{fontSize:"0.55rem",color:"#60a5fa",textAlign:"center",marginTop:2}}>Tap any R32 slot to enter a qualified team</div>
+            : null}
+          <div style={{fontSize:"0.55rem",color:"#3a4050",textAlign:"center",marginTop:2}}>{t.thirdPlaceNote}</div>
+        </div>
+      );
+    }
+
+    function KnockoutTab({ t, knockoutSlots, profile, onSaveSlot }) {
       const [expanded, setExpanded] = useState("Round of 32");
+      const [view, setView] = useState("list");
       return (
         <div style={{paddingBottom:80}}>
           {/* Banner */}
@@ -1176,62 +1363,77 @@
             <div style={{marginTop:10,padding:"8px 10px",background:"rgba(250,204,21,0.06)",border:"1px dashed rgba(250,204,21,0.25)",borderRadius:8,fontSize:"0.68rem",color:"#facc15",textAlign:"center"}}>
               ⏳ Teams revealed after group stage ends June 27
             </div>
-            <div style={{marginTop:8,fontSize:"0.62rem",color:"#5a6070",lineHeight:1.45}}>
-              {t.knockoutPairingRules}
-            </div>
           </div>
 
-          {/* Round selector pills */}
-          <div style={{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}}>
-            {KNOCKOUT_STRUCTURE.map(r => (
-              <button key={r.round} onClick={()=>setExpanded(expanded===r.round?null:r.round)}
-                style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${expanded===r.round?r.color:"#1e2230"}`,background:expanded===r.round?`rgba(0,0,0,0.3)`:"transparent",color:expanded===r.round?r.color:"#5a6070",fontSize:"0.68rem",fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-                {r.round}
+          {/* View toggle */}
+          <div style={{display:"flex",gap:6,marginBottom:12}}>
+            {["list","bracket"].map(v=>(
+              <button key={v} onClick={()=>setView(v)}
+                style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${view===v?"#facc15":"#1e2230"}`,background:view===v?"rgba(250,204,21,0.08)":"transparent",color:view===v?"#facc15":"#5a6070",fontSize:"0.68rem",fontWeight:700,cursor:"pointer"}}>
+                {v==="list"?t.viewList:t.viewBracket}
               </button>
             ))}
           </div>
 
-          {/* Match cards for selected round */}
-          {KNOCKOUT_STRUCTURE.map(r => expanded===r.round && (
-            <div key={r.round}>
-              <div style={{marginBottom:10}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",letterSpacing:"0.06em",color:r.color}}>{r.round}</div>
-                <div style={{fontSize:"0.65rem",color:"#5a6070"}}>{r.dates} · {r.matches.length} match{r.matches.length>1?"es":""}</div>
+          {view==="bracket" && (
+            <BracketView knockoutSlots={knockoutSlots} profile={profile} onSaveSlot={onSaveSlot} t={t}/>
+          )}
+
+          {view==="list" && (
+            <div>
+              {/* Round selector pills */}
+              <div style={{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}}>
+                {KNOCKOUT_STRUCTURE.map(r => (
+                  <button key={r.round} onClick={()=>setExpanded(expanded===r.round?null:r.round)}
+                    style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${expanded===r.round?r.color:"#1e2230"}`,background:expanded===r.round?`rgba(0,0,0,0.3)`:"transparent",color:expanded===r.round?r.color:"#5a6070",fontSize:"0.68rem",fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                    {r.round}
+                  </button>
+                ))}
               </div>
-              {r.matches.map(m => (
-                <div key={m.no} style={{background:"#141720",border:`1px solid #1e2230`,borderLeft:`3px solid ${r.color}`,borderRadius:12,padding:"10px 12px",marginBottom:6}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:"0.62rem"}}>
-                    <span style={{color:r.color,fontWeight:700}}>Match {m.no}</span>
-                    <span style={{color:"#5a6070"}}>{m.date} · {m.time}</span>
+
+              {/* Match cards for selected round */}
+              {KNOCKOUT_STRUCTURE.map(r => expanded===r.round && (
+                <div key={r.round}>
+                  <div style={{marginBottom:10}}>
+                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",letterSpacing:"0.06em",color:r.color}}>{r.round}</div>
+                    <div style={{fontSize:"0.65rem",color:"#5a6070"}}>{r.dates} · {r.matches.length} match{r.matches.length>1?"es":""}</div>
                   </div>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-                    <div style={{flex:1,textAlign:"center",fontSize:"0.72rem",fontWeight:700,color:"#f0f4ff",lineHeight:1.3}}>{m.home}</div>
-                    <div style={{minWidth:40,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:"0.95rem",color:"#3a4050"}}>VS</div>
-                    <div style={{flex:1,textAlign:"center",fontSize:"0.72rem",fontWeight:700,color:"#f0f4ff",lineHeight:1.3}}>{m.away}</div>
-                  </div>
-                  <div style={{fontSize:"0.6rem",color:"#3a4050",textAlign:"center"}}>{m.venue}</div>
+                  {r.matches.map(m => (
+                    <div key={m.no} style={{background:"#141720",border:`1px solid #1e2230`,borderLeft:`3px solid ${r.color}`,borderRadius:12,padding:"10px 12px",marginBottom:6}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:"0.62rem"}}>
+                        <span style={{color:r.color,fontWeight:700}}>Match {m.no}</span>
+                        <span style={{color:"#5a6070"}}>{m.date} · {m.time}</span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
+                        <div style={{flex:1,textAlign:"center",fontSize:"0.72rem",fontWeight:700,color:"#f0f4ff",lineHeight:1.3}}>{m.home}</div>
+                        <div style={{minWidth:40,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:"0.95rem",color:"#3a4050"}}>VS</div>
+                        <div style={{flex:1,textAlign:"center",fontSize:"0.72rem",fontWeight:700,color:"#f0f4ff",lineHeight:1.3}}>{m.away}</div>
+                      </div>
+                      <div style={{fontSize:"0.6rem",color:"#3a4050",textAlign:"center"}}>{m.venue}</div>
+                    </div>
+                  ))}
                 </div>
               ))}
-            </div>
-          ))}
 
-          {/* Full path visual */}
-          <div style={{background:"#10131c",border:"1px solid #1e2230",borderRadius:14,padding:"12px 14px",marginTop:6}}>
-            <div style={{fontSize:"0.65rem",fontWeight:700,color:"#5a6070",letterSpacing:"0.08em",marginBottom:8}}>PATH TO THE FINAL</div>
-            {KNOCKOUT_STRUCTURE.map((r,i) => (
-              <div key={r.round} style={{display:"flex",alignItems:"center",gap:8,marginBottom: i<KNOCKOUT_STRUCTURE.length-1?6:0}}>
-                <div style={{width:10,height:10,borderRadius:"50%",background:r.color,flexShrink:0}}/>
-                <div style={{flex:1}}>
-                  <span style={{fontSize:"0.72rem",fontWeight:700,color:r.color}}>{r.round}</span>
-                  <span style={{fontSize:"0.62rem",color:"#5a6070",marginLeft:8}}>{r.dates}</span>
-                </div>
-                <span style={{fontSize:"0.62rem",color:"#3a4050"}}>{r.matches.length * 2} teams</span>
-                {i<KNOCKOUT_STRUCTURE.length-1 && (
-                  <div style={{position:"absolute",left:17,marginTop:16,width:1,height:6,background:"#1e2230"}}/>
-                )}
+              {/* Full path visual */}
+              <div style={{background:"#10131c",border:"1px solid #1e2230",borderRadius:14,padding:"12px 14px",marginTop:6}}>
+                <div style={{fontSize:"0.65rem",fontWeight:700,color:"#5a6070",letterSpacing:"0.08em",marginBottom:8}}>PATH TO THE FINAL</div>
+                {KNOCKOUT_STRUCTURE.map((r,i) => (
+                  <div key={r.round} style={{display:"flex",alignItems:"center",gap:8,marginBottom: i<KNOCKOUT_STRUCTURE.length-1?6:0}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:r.color,flexShrink:0}}/>
+                    <div style={{flex:1}}>
+                      <span style={{fontSize:"0.72rem",fontWeight:700,color:r.color}}>{r.round}</span>
+                      <span style={{fontSize:"0.62rem",color:"#5a6070",marginLeft:8}}>{r.dates}</span>
+                    </div>
+                    <span style={{fontSize:"0.62rem",color:"#3a4050"}}>{r.matches.length * 2} teams</span>
+                    {i<KNOCKOUT_STRUCTURE.length-1 && (
+                      <div style={{position:"absolute",left:17,marginTop:16,width:1,height:6,background:"#1e2230"}}/>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -1425,7 +1627,7 @@
     }
 
     // ─── LEADERBOARD TAB ───
-    function LeaderboardTab({ t, users, matches, predictions, profile }) {
+    function LeaderboardTab({ t, users, matches, predictions }) {
       const [selectedUser, setSelectedUser] = useState(null);
 
       const calculated = Object.values(users || {}).map(u => {
@@ -1463,10 +1665,9 @@
           </div>
           {calculated.map((u, idx) => {
             const isFirst = idx === 0;
-            const isMe = u.uid === profile?.uid;
             return (
               <button key={u.uid} onClick={()=>setSelectedUser(u)}
-                style={{width:"100%",background:isMe?"rgba(99,102,241,0.08)":isFirst?"rgba(250,204,21,0.06)":"#141720",border:`1px solid ${isMe?"rgba(99,102,241,0.5)":isFirst?"rgba(250,204,21,0.3)":"#1e2230"}`,borderRadius:12,padding:"10px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
+                style={{width:"100%",background: isFirst?"rgba(250,204,21,0.06)":"#141720",border:`1px solid ${isFirst?"rgba(250,204,21,0.3)":"#1e2230"}`,borderRadius:12,padding:"10px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"#facc15",width:28,textAlign:"center"}}>{medals[idx]||idx+1}</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:"0.82rem",color:"#f0f4ff"}}>
@@ -1583,6 +1784,7 @@
       const [matches, setMatches] = useState(BASE_MATCHES);
       const [users, setUsers] = useState({});
       const [predictions, setPredictions] = useState({});
+      const [knockoutSlots, setKnockoutSlots] = useState({});
 
       const [scoreModal, setScoreModal] = useState(null);
       const [scheduleKey, setScheduleKey] = useState(0);
@@ -1593,7 +1795,7 @@
 
       useEffect(() => {
         if (!db) { setCloudError("Firebase SDK failed to load."); setLoadingSession(false); return; }
-        let mRef, uRef, pRef;
+        let mRef, uRef, pRef, kRef;
         let settled = false;
 
         // Safety net: if auth/connection never settles (blocked network, hung
@@ -1655,6 +1857,12 @@
             snap => { if (snap.exists()) setPredictions(snap.val()); },
             err => console.warn("predictions listener error:", err)
           );
+
+          kRef = fbRef("knockoutSlots");
+          kRef.on("value",
+            snap => { setKnockoutSlots(snap.exists() ? snap.val() : {}); },
+            err => console.warn("knockoutSlots listener error:", err)
+          );
         }).catch(err => {
           clearTimeout(failSafe);
           settled = true;
@@ -1663,7 +1871,7 @@
           setLoadingSession(false);
         });
 
-        return () => { clearTimeout(failSafe); mRef?.off(); uRef?.off(); pRef?.off(); };
+        return () => { clearTimeout(failSafe); mRef?.off(); uRef?.off(); pRef?.off(); kRef?.off(); };
       }, []);
 
       const handleOnboardComplete = (prof) => {
@@ -1689,6 +1897,11 @@
         if (!predictModal || !profile) return;
         fbSet(`predictions/${profile.uid}/${predictModal.id}`, { homeScore: h, awayScore: a, timestamp: Date.now() });
         setPredictModal(null);
+      };
+
+      const saveKnockoutSlot = (matchNo, side, teamName) => {
+        const key = `${matchNo}_${side}`;
+        fbSet(`knockoutSlots/${key}`, teamName || null);
       };
 
       if (loadingSession) {
@@ -1739,9 +1952,9 @@
 
           {tab === "groups" && <GroupsTab t={t} matches={matches} />}
           {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} venueFilter={venueFilter} onClearVenueFilter={()=>setVenueFilter(null)} />}
-          {tab === "knockout" && <KnockoutTab t={t} />}
+          {tab === "knockout" && <KnockoutTab t={t} knockoutSlots={knockoutSlots} profile={profile} onSaveSlot={saveKnockoutSlot} />}
           {tab === "venues" && <VenuesTab t={t} matches={matches} onVenueSelect={(vid)=>{ setVenueFilter(vid); setTab("schedule"); }} />}
-          {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} profile={profile} />}
+          {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} />}
           {tab === "me" && <ProfileTab profile={profile} t={t} onUpdateTeams={handleUpdateTeams} />}
 
           <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1018",borderTop:"1px solid #1e2230",display:"flex",zIndex:50}}>
