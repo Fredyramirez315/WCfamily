@@ -1352,8 +1352,6 @@
     }
 
     function KnockoutTab({ t, knockoutSlots, profile, onSaveSlot }) {
-      const [expanded, setExpanded] = useState("Round of 32");
-      const [view, setView] = useState("list");
       return (
         <div style={{paddingBottom:80}}>
           {/* Banner */}
@@ -1365,75 +1363,23 @@
             </div>
           </div>
 
-          {/* View toggle */}
-          <div style={{display:"flex",gap:6,marginBottom:12}}>
-            {["list","bracket"].map(v=>(
-              <button key={v} onClick={()=>setView(v)}
-                style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${view===v?"#facc15":"#1e2230"}`,background:view===v?"rgba(250,204,21,0.08)":"transparent",color:view===v?"#facc15":"#5a6070",fontSize:"0.68rem",fontWeight:700,cursor:"pointer"}}>
-                {v==="list"?t.viewList:t.viewBracket}
-              </button>
+          {/* Bracket */}
+          <BracketView knockoutSlots={knockoutSlots} profile={profile} onSaveSlot={onSaveSlot} t={t}/>
+
+          {/* Path to the Final */}
+          <div style={{background:"#10131c",border:"1px solid #1e2230",borderRadius:14,padding:"12px 14px",marginTop:14}}>
+            <div style={{fontSize:"0.65rem",fontWeight:700,color:"#5a6070",letterSpacing:"0.08em",marginBottom:8}}>PATH TO THE FINAL</div>
+            {KNOCKOUT_STRUCTURE.map((r,i) => (
+              <div key={r.round} style={{display:"flex",alignItems:"center",gap:8,marginBottom:i<KNOCKOUT_STRUCTURE.length-1?6:0}}>
+                <div style={{width:10,height:10,borderRadius:"50%",background:r.color,flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <span style={{fontSize:"0.72rem",fontWeight:700,color:r.color}}>{r.round}</span>
+                  <span style={{fontSize:"0.62rem",color:"#5a6070",marginLeft:8}}>{r.dates}</span>
+                </div>
+                <span style={{fontSize:"0.62rem",color:"#3a4050"}}>{r.matches.length * 2} teams</span>
+              </div>
             ))}
           </div>
-
-          {view==="bracket" && (
-            <BracketView knockoutSlots={knockoutSlots} profile={profile} onSaveSlot={onSaveSlot} t={t}/>
-          )}
-
-          {view==="list" && (
-            <div>
-              {/* Round selector pills */}
-              <div style={{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}}>
-                {KNOCKOUT_STRUCTURE.map(r => (
-                  <button key={r.round} onClick={()=>setExpanded(expanded===r.round?null:r.round)}
-                    style={{padding:"5px 10px",borderRadius:8,border:`1px solid ${expanded===r.round?r.color:"#1e2230"}`,background:expanded===r.round?`rgba(0,0,0,0.3)`:"transparent",color:expanded===r.round?r.color:"#5a6070",fontSize:"0.68rem",fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-                    {r.round}
-                  </button>
-                ))}
-              </div>
-
-              {/* Match cards for selected round */}
-              {KNOCKOUT_STRUCTURE.map(r => expanded===r.round && (
-                <div key={r.round}>
-                  <div style={{marginBottom:10}}>
-                    <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.2rem",letterSpacing:"0.06em",color:r.color}}>{r.round}</div>
-                    <div style={{fontSize:"0.65rem",color:"#5a6070"}}>{r.dates} · {r.matches.length} match{r.matches.length>1?"es":""}</div>
-                  </div>
-                  {r.matches.map(m => (
-                    <div key={m.no} style={{background:"#141720",border:`1px solid #1e2230`,borderLeft:`3px solid ${r.color}`,borderRadius:12,padding:"10px 12px",marginBottom:6}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,fontSize:"0.62rem"}}>
-                        <span style={{color:r.color,fontWeight:700}}>Match {m.no}</span>
-                        <span style={{color:"#5a6070"}}>{m.date} · {m.time}</span>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-                        <div style={{flex:1,textAlign:"center",fontSize:"0.72rem",fontWeight:700,color:"#f0f4ff",lineHeight:1.3}}>{m.home}</div>
-                        <div style={{minWidth:40,textAlign:"center",fontFamily:"'Bebas Neue',sans-serif",fontSize:"0.95rem",color:"#3a4050"}}>VS</div>
-                        <div style={{flex:1,textAlign:"center",fontSize:"0.72rem",fontWeight:700,color:"#f0f4ff",lineHeight:1.3}}>{m.away}</div>
-                      </div>
-                      <div style={{fontSize:"0.6rem",color:"#3a4050",textAlign:"center"}}>{m.venue}</div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-
-              {/* Full path visual */}
-              <div style={{background:"#10131c",border:"1px solid #1e2230",borderRadius:14,padding:"12px 14px",marginTop:6}}>
-                <div style={{fontSize:"0.65rem",fontWeight:700,color:"#5a6070",letterSpacing:"0.08em",marginBottom:8}}>PATH TO THE FINAL</div>
-                {KNOCKOUT_STRUCTURE.map((r,i) => (
-                  <div key={r.round} style={{display:"flex",alignItems:"center",gap:8,marginBottom: i<KNOCKOUT_STRUCTURE.length-1?6:0}}>
-                    <div style={{width:10,height:10,borderRadius:"50%",background:r.color,flexShrink:0}}/>
-                    <div style={{flex:1}}>
-                      <span style={{fontSize:"0.72rem",fontWeight:700,color:r.color}}>{r.round}</span>
-                      <span style={{fontSize:"0.62rem",color:"#5a6070",marginLeft:8}}>{r.dates}</span>
-                    </div>
-                    <span style={{fontSize:"0.62rem",color:"#3a4050"}}>{r.matches.length * 2} teams</span>
-                    {i<KNOCKOUT_STRUCTURE.length-1 && (
-                      <div style={{position:"absolute",left:17,marginTop:16,width:1,height:6,background:"#1e2230"}}/>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       );
     }
