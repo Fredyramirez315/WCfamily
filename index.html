@@ -498,7 +498,8 @@
         const existing = Object.values(existingUsers || {}).find(u => u.name.toLowerCase() === cleanName.toLowerCase());
         
         if (existing) {
-          onComplete(existing);
+          const updated = { ...existing, lang };
+          onComplete(updated);
         } else {
           const uid = genUID();
           onComplete({ uid, name: cleanName, lang, favorites: [], isAdmin: pin.length > 0, adminPin: pin||null });
