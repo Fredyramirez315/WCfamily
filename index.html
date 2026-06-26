@@ -99,7 +99,7 @@
         knockoutSub: "Starts June 28 · All QF/SF/Final in USA", bracketPending: "Bracket fills after group stage ends June 27",
         viewList: "List", viewBracket: "Bracket",
         enterTeam: "Enter team name", slotSaved: "Saved",
-        thirdPlaceNote: "3rd-place slots locked until June 27 (Annex C draw)",
+        thirdPlaceNote: "3rd-place slots: enter as FIFA confirms matchups",
         profileTitle: "My Profile", shareLink: "Share my link", shareLinkHint: "Send this to yourself to access your account on another device",
         copied: "Copied!", editProfile: "Edit Profile", favoriteTeams: "Favorite Teams", language: "Language",
         signOut: "Sign out", groupAdvance: "Top 2 + best 8 third-place advance", yourPrediction: "Your Prediction",
@@ -127,7 +127,7 @@
         knockoutSub: "Comienza el 28 de junio · QF/SF/Final en EE.UU.", bracketPending: "El cuadro se completa al terminar la fase de grupos el 27 de junio",
         viewList: "Lista", viewBracket: "Cuadro",
         enterTeam: "Nombre del equipo", slotSaved: "Guardado",
-        thirdPlaceNote: "Casillas de 3ros bloqueadas hasta el 27 de junio (Tabla Anexo C)",
+        thirdPlaceNote: "Casillas de 3ros: ingresar a medida que la FIFA confirma los cruces",
         profileTitle: "Mi Perfil", shareLink: "Compartir mi enlace", shareLinkHint: "Envíatelo para acceder desde otro dispositivo",
         copied: "¡Copiado!", editProfile: "Editar Perfil", favoriteTeams: "Equipos Favoritos", language: "Idioma",
         signOut: "Cerrar sesión", groupAdvance: "Top 2 + mejores 8 terceros avanzan", yourPrediction: "Tu Predicción",
@@ -1204,7 +1204,7 @@
 
       const handleTap = (no, side) => {
         if (!profile?.isAdmin) return;
-        if (isThird(side==="home" ? matchDef[no].home : matchDef[no].away)) return;
+
         setEditSlot({ no, side });
         setEditVal(knockoutSlots?.[`${no}_${side}`] || "");
       };
@@ -1317,7 +1317,7 @@
               {/* R32 boxes */}
               {R32_ORDER.map((no,i)=>{
                 const def = matchDef[no];
-                const hEdit = !isThird(def.home), aEdit = !isThird(def.away);
+                const hEdit = true, aEdit = true;
                 return box(no, CX[0], r32Top(i), BW[0], COLORS[0],
                   getLabel(no,"home"), getLabel(no,"away"),
                   hEdit, aEdit, isFilled(no,"home"), isFilled(no,"away"));
@@ -1627,7 +1627,7 @@
     }
 
     // ─── LEADERBOARD TAB ───
-    function LeaderboardTab({ t, users, matches, predictions }) {
+    function LeaderboardTab({ t, users, matches, predictions, profile }) {
       const [selectedUser, setSelectedUser] = useState(null);
 
       const calculated = Object.values(users || {}).map(u => {
@@ -1665,9 +1665,10 @@
           </div>
           {calculated.map((u, idx) => {
             const isFirst = idx === 0;
+            const isMe = u.uid === profile?.uid;
             return (
               <button key={u.uid} onClick={()=>setSelectedUser(u)}
-                style={{width:"100%",background: isFirst?"rgba(250,204,21,0.06)":"#141720",border:`1px solid ${isFirst?"rgba(250,204,21,0.3)":"#1e2230"}`,borderRadius:12,padding:"10px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
+                style={{width:"100%",background: isMe?"rgba(99,102,241,0.1)":isFirst?"rgba(250,204,21,0.06)":"#141720",border:`1px solid ${isMe?"#6366f1":isFirst?"rgba(250,204,21,0.3)":"#1e2230"}`,borderRadius:12,padding:"10px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"#facc15",width:28,textAlign:"center"}}>{medals[idx]||idx+1}</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:"0.82rem",color:"#f0f4ff"}}>
@@ -1954,7 +1955,7 @@
           {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} venueFilter={venueFilter} onClearVenueFilter={()=>setVenueFilter(null)} />}
           {tab === "knockout" && <KnockoutTab t={t} knockoutSlots={knockoutSlots} profile={profile} onSaveSlot={saveKnockoutSlot} />}
           {tab === "venues" && <VenuesTab t={t} matches={matches} onVenueSelect={(vid)=>{ setVenueFilter(vid); setTab("schedule"); }} />}
-          {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} />}
+          {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} profile={profile} />}
           {tab === "me" && <ProfileTab profile={profile} t={t} onUpdateTeams={handleUpdateTeams} />}
 
           <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1018",borderTop:"1px solid #1e2230",display:"flex",zIndex:50}}>
