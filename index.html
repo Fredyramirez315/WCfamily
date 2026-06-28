@@ -99,9 +99,10 @@
         knockoutSub: "Starts June 28 · All QF/SF/Final in USA", bracketPending: "Bracket fills after group stage ends June 27",
         bracketLive: "Live — teams update as they qualify",
         finalPredTitle: "FINAL PREDICTION", finalPredDeadline: "Locks at R16 start",
+        finalPredIntro: "Think you know who makes the Final? Pick your two finalists and who lifts the trophy before the Round of 16 kicks off.",
         selectFinalist: "Pick a team", whoWins: "WHO WINS THE FINAL?",
         scoringFinalist: "Correct finalist (each)", scoringChampion: "Correct champion",
-        scoringMax: "Perfect prediction (max)", savePred: "SAVE PREDICTION 🔒",
+        scoringMax: "Both finalists + champion", savePred: "SAVE PREDICTION 🔒",
         updatePred: "UPDATE PREDICTION", predLocked: "Your prediction is locked in",
         predMissed: "Prediction window closed",
         viewList: "List", viewBracket: "Bracket",
@@ -134,9 +135,10 @@
         knockoutSub: "Comienza el 28 de junio · QF/SF/Final en EE.UU.", bracketPending: "El cuadro se completa al terminar la fase de grupos el 27 de junio",
         bracketLive: "En vivo — equipos se actualizan conforme clasifican",
         finalPredTitle: "PREDICCIÓN DE LA FINAL", finalPredDeadline: "Cierra al inicio de octavos",
+        finalPredIntro: "¿Crees saber quiénes llegan a la Final? Elige tus dos finalistas y quién levanta el trofeo antes de que comiencen los octavos de final.",
         selectFinalist: "Elige un equipo", whoWins: "¿QUIÉN GANA LA FINAL?",
         scoringFinalist: "Finalista correcto (c/u)", scoringChampion: "Campeón correcto",
-        scoringMax: "Predicción perfecta (máx)", savePred: "GUARDAR PREDICCIÓN 🔒",
+        scoringMax: "Ambos finalistas + campeón", savePred: "GUARDAR PREDICCIÓN 🔒",
         updatePred: "ACTUALIZAR PREDICCIÓN", predLocked: "Tu predicción está confirmada",
         predMissed: "Ventana de predicción cerrada",
         viewList: "Lista", viewBracket: "Cuadro",
@@ -1057,12 +1059,17 @@
           <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,#facc15,#f97316,#facc15)"}}/>
 
           {/* Header */}
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
             <span style={{fontSize:"1.1rem"}}>🏆</span>
             <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"#facc15",letterSpacing:"0.06em"}}>{t.finalPredTitle}</span>
             <span style={{marginLeft:"auto",fontSize:"0.55rem",color:"#f97316",fontWeight:700,background:"rgba(249,115,22,0.1)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:5,padding:"2px 6px",whiteSpace:"nowrap"}}>
               {locked ? "🔒 LOCKED" : `⏰ ${t.finalPredDeadline}`}
             </span>
+          </div>
+
+          {/* Intro text */}
+          <div style={{fontSize:"0.72rem",color:"#c8cde0",lineHeight:1.5,marginBottom:12,fontWeight:500}}>
+            {t.finalPredIntro}
           </div>
 
           {/* Finalist slots */}
@@ -1109,17 +1116,17 @@
           )}
 
           {/* Scoring note */}
-          <div style={{background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:8,padding:"8px 10px",marginBottom:12}}>
-            {[[t.scoringFinalist,"5 pts"],[t.scoringChampion,"10 pts"],[t.scoringMax,"20 pts"]].map(([desc,pts])=>(
-              <div key={desc} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                <span style={{fontSize:"0.58rem",color:"#7a8090"}}>{desc}</span>
-                <span style={{fontSize:"0.58rem",fontWeight:700,color:"#a78bfa",background:"rgba(167,139,250,0.1)",padding:"1px 6px",borderRadius:4}}>{pts}</span>
+          <div style={{background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.3)",borderRadius:8,padding:"10px 12px",marginBottom:12}}>
+            {[[t.scoringFinalist,"5 pts"],[t.scoringChampion,"10 pts"],[t.scoringMax,"20 pts max"]].map(([desc,pts],i)=>(
+              <div key={desc} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:i<2?6:0}}>
+                <span style={{fontSize:"0.68rem",color:"#c8cde0",fontWeight:500}}>{desc}</span>
+                <span style={{fontSize:"0.68rem",fontWeight:800,color:"#a78bfa",background:"rgba(167,139,250,0.15)",padding:"2px 8px",borderRadius:5}}>{pts}</span>
               </div>
             ))}
             {finalPlayed && totalPts > 0 && (
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid rgba(99,102,241,0.2)",marginTop:4,paddingTop:4}}>
-                <span style={{fontSize:"0.6rem",color:"#4ade80",fontWeight:700}}>Your total</span>
-                <span style={{fontSize:"0.6rem",fontWeight:800,color:"#4ade80"}}>+{totalPts} pts</span>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid rgba(99,102,241,0.3)",marginTop:6,paddingTop:6}}>
+                <span style={{fontSize:"0.7rem",color:"#4ade80",fontWeight:700}}>Your total</span>
+                <span style={{fontSize:"0.7rem",fontWeight:800,color:"#4ade80"}}>+{totalPts} pts</span>
               </div>
             )}
           </div>
@@ -1850,8 +1857,9 @@
         });
         const finalPts = calcFinalPredPoints(u.uid, predictions, knockoutSlots, matches);
         score += finalPts;
+        const hasFinalPick = !!(predictions?.[u.uid]?.finalPick?.team1);
         const hitRate = count > 0 ? Math.round(((exact+correct)/count)*100) : null;
-        return { ...u, score, exact, correct, count, hitRate };
+        return { ...u, score, exact, correct, count, hitRate, hasFinalPick };
       }).sort((a,b) => b.score - a.score || b.exact - a.exact);
 
       const medals = ["🥇","🥈","🥉"];
@@ -1888,6 +1896,11 @@
                   </div>
                   <div style={{fontSize:"0.6rem",color:"#5a6070",marginTop:2}}>
                     {u.count} played · {u.exact}🏅 exact · {u.correct}✓ result
+                    {profile?.isAdmin && (
+                      <span style={{marginLeft:6,fontSize:"0.55rem",fontWeight:700,color:u.hasFinalPick?"#4ade80":"#f87171"}}>
+                        {u.hasFinalPick?"🏆 ✓":"🏆 —"}
+                      </span>
+                    )}
                   </div>
                   {u.hitRate !== null && (
                     <div style={{marginTop:4}}>
