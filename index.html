@@ -98,7 +98,7 @@
         predictions: "predictions", venues: "Venues", capacity: "seats", knockoutTitle: "Knockout Stage",
         knockoutSub: "Starts June 28 · All QF/SF/Final in USA", bracketPending: "Bracket fills after group stage ends June 27",
         bracketLive: "Live — teams update as they qualify",
-        finalPredTitle: "FINAL PREDICTION", finalPredDeadline: "Locks at R16 start",
+        finalPredTitle: "FINAL PREDICTION", finalPredDeadline: "Locks Jul 4 at kickoff",
         finalPredIntro: "Think you know who makes the Final? Pick your two finalists and who lifts the trophy before the Round of 16 kicks off.",
         selectFinalist: "Pick a team", whoWins: "WHO WINS THE FINAL?",
         scoringFinalist: "Correct finalist (each)", scoringChampion: "Correct champion",
@@ -134,7 +134,7 @@
         predictions: "predicciones", venues: "Estadios", capacity: "aforo", knockoutTitle: "Fase Eliminatoria",
         knockoutSub: "Comienza el 28 de junio · QF/SF/Final en EE.UU.", bracketPending: "El cuadro se completa al terminar la fase de grupos el 27 de junio",
         bracketLive: "En vivo — equipos se actualizan conforme clasifican",
-        finalPredTitle: "PREDICCIÓN DE LA FINAL", finalPredDeadline: "Cierra al inicio de octavos",
+        finalPredTitle: "PREDICCIÓN DE LA FINAL", finalPredDeadline: "Cierra el 4 de jul al inicio",
         finalPredIntro: "¿Crees saber quiénes llegan a la Final? Elige tus dos finalistas y quién levanta el trofeo antes de que comiencen los octavos de final.",
         selectFinalist: "Elige un equipo", whoWins: "¿QUIÉN GANA LA FINAL?",
         scoringFinalist: "Finalista correcto (c/u)", scoringChampion: "Campeón correcto",
@@ -717,7 +717,7 @@
     }
 
     // ─── MATCH CARD COMPONENT ───
-    function MatchCard({ match, profile, t, onScore, onPredict, userPred, isFav, predictions, users, showPredSummary }) {
+    function MatchCard({ match, profile, t, onScore, onPredict, userPred, isFav, predictions, users, showPredSummary, knockoutSlots, onSaveSlot }) {
       const v = VENUES.find(v=>v.id===match.venueId);
       const hasScore = match.homeScore!==null && match.awayScore!==null;
       const hasPred = userPred?.homeScore!==undefined && userPred?.homeScore!==null;
@@ -728,6 +728,34 @@
       const countdown = timeUntilKickoff(match);
       const calLink = calendarLink(match);
       const predSummary = showPredSummary ? getPredSummary(match, predictions, users) : null;
+      const [editingTeams, setEditingTeams] = React.useState(false);
+      const [editHome, setEditHome] = React.useState("");
+      const [editAway, setEditAway] = React.useState("");
+
+      // Resolve team names from knockoutSlots for R16+ matches
+      const isKnockoutSlot = match.id >= 89;
+      const displayHome = isKnockoutSlot
+        ? (knockoutSlots?.[`${match.id}_home`] || match.home)
+        : match.home;
+      const displayAway = isKnockoutSlot
+        ? (knockoutSlots?.[`${match.id}_away`] || match.away)
+        : match.away;
+      const homeIsPlaceholder = isKnockoutSlot && !knockoutSlots?.[`${match.id}_home`];
+      const awayIsPlaceholder = isKnockoutSlot && !knockoutSlots?.[`${match.id}_away`];
+
+      const openTeamEdit = () => {
+        setEditHome(knockoutSlots?.[`${match.id}_home`] || "");
+        setEditAway(knockoutSlots?.[`${match.id}_away`] || "");
+        setEditingTeams(true);
+      };
+
+      const saveTeams = () => {
+        if (onSaveSlot) {
+          onSaveSlot(match.id, "home", editHome.trim());
+          onSaveSlot(match.id, "away", editAway.trim());
+        }
+        setEditingTeams(false);
+      };
 
       // Result badge from favorite team perspective
       const favTeams = profile?.favorites || [];
@@ -782,8 +810,8 @@
           {/* Teams and score */}
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
-              <div style={{height:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}><Flag team={match.home}/></div>
-              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:4,textAlign:"center"}}>{match.home}</div>
+              <div style={{height:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}><Flag team={displayHome}/></div>
+              <div style={{fontWeight:700,fontSize:"0.72rem",color:homeIsPlaceholder?"#4a5060":"#f0f4ff",marginTop:4,textAlign:"center"}}>{displayHome}</div>
             </div>
             <div style={{textAlign:"center",minWidth:72}}>
               {hasScore
@@ -803,13 +831,39 @@
               )}
             </div>
             <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
-              <div style={{height:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}><Flag team={match.away}/></div>
-              <div style={{fontWeight:700,fontSize:"0.72rem",color:"#f0f4ff",marginTop:4,textAlign:"center"}}>{match.away}</div>
+              <div style={{height:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}><Flag team={displayAway}/></div>
+              <div style={{fontWeight:700,fontSize:"0.72rem",color:awayIsPlaceholder?"#4a5060":"#f0f4ff",marginTop:4,textAlign:"center"}}>{displayAway}</div>
             </div>
           </div>
 
           {/* Venue */}
           <div style={{fontSize:"0.63rem",color:"#3a4050",textAlign:"center",marginTop:5}}>{v?.fifaName} · {v?.city}</div>
+
+          {/* Admin team edit for R16+ */}
+          {isKnockoutSlot && profile?.isAdmin && !editingTeams && (
+            <button onClick={openTeamEdit}
+              style={{display:"block",margin:"7px auto 0",padding:"3px 10px",background:"transparent",border:"1px solid #2a3040",borderRadius:6,color:"#5a6070",fontSize:"0.58rem",fontWeight:700,cursor:"pointer"}}>
+              ✏️ Edit teams
+            </button>
+          )}
+          {editingTeams && (
+            <div style={{marginTop:8,background:"#0d1018",border:"1px solid #2a3040",borderRadius:8,padding:"8px 10px"}}>
+              <div style={{display:"flex",gap:6,marginBottom:6}}>
+                <input value={editHome} onChange={e=>setEditHome(e.target.value)}
+                  placeholder={match.home}
+                  style={{flex:1,padding:"5px 7px",background:"#141720",border:"1px solid #2a3040",borderRadius:6,color:"#f0f4ff",fontSize:"0.65rem",outline:"none"}}/>
+                <input value={editAway} onChange={e=>setEditAway(e.target.value)}
+                  placeholder={match.away}
+                  style={{flex:1,padding:"5px 7px",background:"#141720",border:"1px solid #2a3040",borderRadius:6,color:"#f0f4ff",fontSize:"0.65rem",outline:"none"}}/>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={saveTeams}
+                  style={{flex:1,padding:"5px",background:"#facc15",border:"none",borderRadius:6,color:"#000",fontWeight:800,fontSize:"0.65rem",cursor:"pointer"}}>Save</button>
+                <button onClick={()=>setEditingTeams(false)}
+                  style={{flex:1,padding:"5px",background:"transparent",border:"1px solid #2a3040",borderRadius:6,color:"#5a6070",fontSize:"0.65rem",cursor:"pointer"}}>Cancel</button>
+              </div>
+            </div>
+          )}
 
           {/* Group prediction summary (shown before kickoff if there are predictions) */}
           {predSummary && !hasScore && !locked && (predSummary.home+predSummary.draw+predSummary.away) > 0 && (
@@ -1162,7 +1216,7 @@
       );
     }
 
-    function ScheduleTab({ t, matches, profile, predictions, users, onScoreModal, onPredictModal, venueFilter, onClearVenueFilter, knockoutSlots, onSaveFinalPred }) {
+    function ScheduleTab({ t, matches, profile, predictions, users, onScoreModal, onPredictModal, venueFilter, onClearVenueFilter, knockoutSlots, onSaveFinalPred, onSaveSlot }) {
       const [teamSearch, setTeamSearch] = useState("");
       const [selectedTeam, setSelectedTeam] = useState(null);
       const [pastOpen, setPastOpen] = useState(false);
@@ -1350,7 +1404,8 @@
                               userPred={predictions?.[profile?.uid]?.[m.id]}
                               onScore={() => onScoreModal(m)}
                               onPredict={() => onPredictModal(m)}
-                              predictions={predictions} users={users} showPredSummary={true} />
+                              predictions={predictions} users={users} showPredSummary={true}
+                              knockoutSlots={knockoutSlots} onSaveSlot={onSaveSlot} />
                           ))}
                         </div>
                       )}
@@ -2182,7 +2237,7 @@
           </div>
 
           {tab === "groups" && <GroupsTab t={t} matches={matches} />}
-          {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} venueFilter={venueFilter} onClearVenueFilter={()=>setVenueFilter(null)} knockoutSlots={knockoutSlots} onSaveFinalPred={saveFinalPrediction} />}
+          {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} venueFilter={venueFilter} onClearVenueFilter={()=>setVenueFilter(null)} knockoutSlots={knockoutSlots} onSaveFinalPred={saveFinalPrediction} onSaveSlot={saveKnockoutSlot} />}
           {tab === "knockout" && <KnockoutTab t={t} knockoutSlots={knockoutSlots} profile={profile} onSaveSlot={saveKnockoutSlot} />}
           {tab === "venues" && <VenuesTab t={t} matches={matches} onVenueSelect={(vid)=>{ setVenueFilter(vid); setTab("schedule"); }} />}
           {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} profile={profile} knockoutSlots={knockoutSlots} />}
