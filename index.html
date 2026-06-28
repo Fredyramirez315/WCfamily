@@ -98,6 +98,12 @@
         predictions: "predictions", venues: "Venues", capacity: "seats", knockoutTitle: "Knockout Stage",
         knockoutSub: "Starts June 28 · All QF/SF/Final in USA", bracketPending: "Bracket fills after group stage ends June 27",
         bracketLive: "Live — teams update as they qualify",
+        finalPredTitle: "FINAL PREDICTION", finalPredDeadline: "Locks at R16 start",
+        selectFinalist: "Pick a team", whoWins: "WHO WINS THE FINAL?",
+        scoringFinalist: "Correct finalist (each)", scoringChampion: "Correct champion",
+        scoringMax: "Perfect prediction (max)", savePred: "SAVE PREDICTION 🔒",
+        updatePred: "UPDATE PREDICTION", predLocked: "Your prediction is locked in",
+        predMissed: "Prediction window closed",
         viewList: "List", viewBracket: "Bracket",
         enterTeam: "Enter team name", slotSaved: "Saved",
         thirdPlaceNote: "3rd-place slots: enter as FIFA confirms matchups",
@@ -127,6 +133,12 @@
         predictions: "predicciones", venues: "Estadios", capacity: "aforo", knockoutTitle: "Fase Eliminatoria",
         knockoutSub: "Comienza el 28 de junio · QF/SF/Final en EE.UU.", bracketPending: "El cuadro se completa al terminar la fase de grupos el 27 de junio",
         bracketLive: "En vivo — equipos se actualizan conforme clasifican",
+        finalPredTitle: "PREDICCIÓN DE LA FINAL", finalPredDeadline: "Cierra al inicio de octavos",
+        selectFinalist: "Elige un equipo", whoWins: "¿QUIÉN GANA LA FINAL?",
+        scoringFinalist: "Finalista correcto (c/u)", scoringChampion: "Campeón correcto",
+        scoringMax: "Predicción perfecta (máx)", savePred: "GUARDAR PREDICCIÓN 🔒",
+        updatePred: "ACTUALIZAR PREDICCIÓN", predLocked: "Tu predicción está confirmada",
+        predMissed: "Ventana de predicción cerrada",
         viewList: "Lista", viewBracket: "Cuadro",
         enterTeam: "Nombre del equipo", slotSaved: "Guardado",
         thirdPlaceNote: "Casillas de 3ros: ingresar a medida que la FIFA confirma los cruces",
@@ -960,7 +972,190 @@
     }
 
     // ─── SCHEDULE TAB ───
-    function ScheduleTab({ t, matches, profile, predictions, users, onScoreModal, onPredictModal, venueFilter, onClearVenueFilter }) {
+    // ─── FINAL PREDICTION POINTS ───
+    function calcFinalPredPoints(uid, predictions, knockoutSlots, matches) {
+      const pick = predictions?.[uid]?.finalPick;
+      if (!pick?.team1 || !pick?.team2 || !pick?.champion) return 0;
+      const actual1 = knockoutSlots?.["104_home"];
+      const actual2 = knockoutSlots?.["104_away"];
+      if (!actual1 || !actual2) return 0;
+      const m104 = matches?.find(m => m.id === 104);
+      const finalPlayed = m104?.homeScore != null && m104?.awayScore != null;
+      const actualChampion = finalPlayed
+        ? (m104.homeScore >= m104.awayScore ? actual1 : actual2)
+        : null;
+      const finalists = new Set([actual1, actual2]);
+      let pts = 0;
+      if (finalists.has(pick.team1)) pts += 5;
+      if (finalists.has(pick.team2)) pts += 5;
+      if (actualChampion && pick.champion === actualChampion) pts += 10;
+      return pts;
+    }
+
+    // ─── FINAL PREDICTION CARD ───
+    function FinalPredictionCard({ profile, predictions, matches, knockoutSlots, t, onSave }) {
+      const myPick = predictions?.[profile?.uid]?.finalPick || null;
+      const [team1, setTeam1] = React.useState(myPick?.team1 || "");
+      const [team2, setTeam2] = React.useState(myPick?.team2 || "");
+      const [champion, setChampion] = React.useState(myPick?.champion || "");
+      const [sheet, setSheet] = React.useState(null);
+      const [saved, setSaved] = React.useState(false);
+
+      const match89 = matches?.find(m => m.id === 89);
+      const locked = isPredictionLocked(match89);
+
+      const R32_TEAMS = ["Algeria","Argentina","Australia","Austria","Belgium",
+        "Bosnia & Herzegovina","Brazil","Canada","Cape Verde","Colombia","Croatia",
+        "DR Congo","Ecuador","Egypt","England","France","Germany","Ghana",
+        "Ivory Coast","Japan","Mexico","Morocco","Netherlands","Norway","Paraguay",
+        "Portugal","Senegal","South Africa","Spain","Sweden","Switzerland","USA"];
+
+      const canSave = team1 && team2 && champion && team1 !== team2;
+
+      const handleSave = () => {
+        if (!canSave || locked) return;
+        onSave({ team1, team2, champion, timestamp: Date.now() });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      };
+
+      const selectTeam = (team) => {
+        if (sheet === "team1") {
+          setTeam1(team);
+          if (team2 === team) setTeam2("");
+          if (champion === team) setChampion("");
+        } else {
+          setTeam2(team);
+          if (team1 === team) setTeam1("");
+          if (champion === team) setChampion("");
+        }
+        setSheet(null);
+      };
+
+      // Scoring display after final
+      const actual1 = knockoutSlots?.["104_home"];
+      const actual2 = knockoutSlots?.["104_away"];
+      const m104 = matches?.find(m => m.id === 104);
+      const finalPlayed = m104?.homeScore != null && m104?.awayScore != null;
+      const actualChampion = finalPlayed
+        ? (m104.homeScore >= m104.awayScore ? actual1 : actual2) : null;
+      const finalists = actual1 && actual2 ? new Set([actual1, actual2]) : null;
+      const pts1 = finalists?.has(team1) ? 5 : 0;
+      const pts2 = finalists?.has(team2) ? 5 : 0;
+      const ptsC = actualChampion && champion === actualChampion ? 10 : 0;
+      const totalPts = pts1 + pts2 + ptsC;
+
+      const slotStyle = (val, isChamp) => ({
+        flex:1, background: isChamp ? "rgba(250,204,21,0.08)" : "#0d1018",
+        border:`1px solid ${isChamp ? "rgba(250,204,21,0.6)" : val ? "rgba(250,204,21,0.3)" : "#2a3040"}`,
+        borderRadius:10, padding:"10px 8px", textAlign:"center",
+        cursor: locked ? "default" : "pointer", position:"relative"
+      });
+
+      return (
+        <div style={{background:"linear-gradient(135deg,#12101e,#1a1530)",border:"1px solid rgba(250,204,21,0.35)",borderRadius:14,padding:14,marginBottom:14,position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,#facc15,#f97316,#facc15)"}}/>
+
+          {/* Header */}
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            <span style={{fontSize:"1.1rem"}}>🏆</span>
+            <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"#facc15",letterSpacing:"0.06em"}}>{t.finalPredTitle}</span>
+            <span style={{marginLeft:"auto",fontSize:"0.55rem",color:"#f97316",fontWeight:700,background:"rgba(249,115,22,0.1)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:5,padding:"2px 6px",whiteSpace:"nowrap"}}>
+              {locked ? "🔒 LOCKED" : `⏰ ${t.finalPredDeadline}`}
+            </span>
+          </div>
+
+          {/* Finalist slots */}
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+            {[["team1","FINALIST 1",team1],["team2","FINALIST 2",team2]].map(([key,lbl,val],i) => (
+              <React.Fragment key={key}>
+                {i===1 && <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"#3a4050",flexShrink:0}}>VS</div>}
+                <div onClick={()=>!locked&&setSheet(key)} style={slotStyle(val, val&&val===champion)}>
+                  {val && val===champion && (
+                    <div style={{position:"absolute",top:-8,left:"50%",transform:"translateX(-50%)",background:"#facc15",color:"#000",fontSize:"0.45rem",fontWeight:800,padding:"1px 6px",borderRadius:10,whiteSpace:"nowrap"}}>⭐ CHAMPION</div>
+                  )}
+                  <div style={{fontSize:"0.52rem",color:"#5a6070",fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>{lbl}</div>
+                  {val
+                    ? <div style={{fontSize:"0.7rem",fontWeight:700,color:"#f0f4ff",lineHeight:1.3}}>{val}</div>
+                    : <div style={{fontSize:"0.62rem",color:"#3a4050"}}>{locked?"—":`+ ${t.selectFinalist}`}</div>}
+                  {finalPlayed && val && (
+                    <div style={{marginTop:4,fontSize:"0.52rem",fontWeight:700,color:(i===0?pts1:pts2)>0?"#4ade80":"#ef4444"}}>
+                      {(i===0?pts1:pts2)>0?"+5 pts":"✗"}
+                    </div>
+                  )}
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Champion pick */}
+          {(team1||team2) && (
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:"0.57rem",color:"#5a6070",fontWeight:700,letterSpacing:"0.08em",marginBottom:6}}>{t.whoWins}</div>
+              <div style={{display:"flex",gap:6}}>
+                {[team1,team2].filter(Boolean).map(tm=>(
+                  <button key={tm} onClick={()=>!locked&&setChampion(tm)} disabled={locked}
+                    style={{flex:1,padding:"8px 6px",background:champion===tm?"rgba(250,204,21,0.1)":"#0d1018",border:`1px solid ${champion===tm?"#facc15":"#2a3040"}`,borderRadius:8,fontSize:"0.65rem",fontWeight:700,color:champion===tm?"#facc15":"#5a6070",cursor:locked?"default":"pointer"}}>
+                    {tm}{champion===tm?" ⭐":""}
+                  </button>
+                ))}
+              </div>
+              {finalPlayed && champion && (
+                <div style={{marginTop:5,fontSize:"0.58rem",fontWeight:700,textAlign:"center",color:ptsC>0?"#4ade80":"#ef4444"}}>
+                  {ptsC>0?"⭐ Correct champion! +10 pts":"✗ Champion incorrect"}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Scoring note */}
+          <div style={{background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:8,padding:"8px 10px",marginBottom:12}}>
+            {[[t.scoringFinalist,"5 pts"],[t.scoringChampion,"10 pts"],[t.scoringMax,"20 pts"]].map(([desc,pts])=>(
+              <div key={desc} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                <span style={{fontSize:"0.58rem",color:"#7a8090"}}>{desc}</span>
+                <span style={{fontSize:"0.58rem",fontWeight:700,color:"#a78bfa",background:"rgba(167,139,250,0.1)",padding:"1px 6px",borderRadius:4}}>{pts}</span>
+              </div>
+            ))}
+            {finalPlayed && totalPts > 0 && (
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid rgba(99,102,241,0.2)",marginTop:4,paddingTop:4}}>
+                <span style={{fontSize:"0.6rem",color:"#4ade80",fontWeight:700}}>Your total</span>
+                <span style={{fontSize:"0.6rem",fontWeight:800,color:"#4ade80"}}>+{totalPts} pts</span>
+              </div>
+            )}
+          </div>
+
+          {/* Save / locked state */}
+          {!locked
+            ? <button onClick={handleSave} disabled={!canSave}
+                style={{width:"100%",padding:"10px",background:canSave?"#facc15":"#2a3040",border:"none",borderRadius:10,color:canSave?"#000":"#5a6070",fontWeight:800,fontSize:"0.75rem",cursor:canSave?"pointer":"default"}}>
+                {saved?"✓ SAVED!":myPick?t.updatePred:t.savePred}
+              </button>
+            : myPick
+              ? <div style={{textAlign:"center",fontSize:"0.6rem",color:"#5a6070",padding:"6px 0"}}>🔒 {t.predLocked}</div>
+              : <div style={{textAlign:"center",fontSize:"0.6rem",color:"#ef4444",padding:"6px 0"}}>⚠️ {t.predMissed}</div>
+          }
+
+          {/* Team picker bottom sheet */}
+          {sheet && (
+            <div onClick={()=>setSheet(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:100,display:"flex",alignItems:"flex-end"}}>
+              <div onClick={e=>e.stopPropagation()} style={{background:"#141720",border:"1px solid #1e2230",borderRadius:"20px 20px 0 0",width:"100%",maxHeight:"70vh",overflowY:"auto",padding:16}}>
+                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1rem",color:"#facc15",letterSpacing:"0.06em",marginBottom:12}}>{t.selectFinalist}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {R32_TEAMS.filter(tm=>sheet==="team1"?tm!==team2:tm!==team1).map(tm=>(
+                    <button key={tm} onClick={()=>selectTeam(tm)}
+                      style={{padding:"9px 10px",background:((sheet==="team1"&&tm===team1)||(sheet==="team2"&&tm===team2))?"rgba(250,204,21,0.1)":"#0d1018",border:`1px solid ${((sheet==="team1"&&tm===team1)||(sheet==="team2"&&tm===team2))?"#facc15":"#1e2230"}`,borderRadius:8,fontSize:"0.66rem",fontWeight:600,color:((sheet==="team1"&&tm===team1)||(sheet==="team2"&&tm===team2))?"#facc15":"#f0f4ff",cursor:"pointer",textAlign:"left"}}>
+                      {tm}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ScheduleTab({ t, matches, profile, predictions, users, onScoreModal, onPredictModal, venueFilter, onClearVenueFilter, knockoutSlots, onSaveFinalPred }) {
       const [teamSearch, setTeamSearch] = useState("");
       const [selectedTeam, setSelectedTeam] = useState(null);
       const [pastOpen, setPastOpen] = useState(false);
@@ -1004,6 +1199,16 @@
 
       return (
         <div style={{paddingBottom:80}}>
+
+          {/* FINAL PREDICTION CARD */}
+          <FinalPredictionCard
+            profile={profile}
+            predictions={predictions}
+            matches={matches}
+            knockoutSlots={knockoutSlots}
+            t={t}
+            onSave={onSaveFinalPred}
+          />
 
           {/* VENUE FILTER HEADER */}
           {venueFilter && selectedVenue && (
@@ -1632,7 +1837,7 @@
     }
 
     // ─── LEADERBOARD TAB ───
-    function LeaderboardTab({ t, users, matches, predictions, profile }) {
+    function LeaderboardTab({ t, users, matches, predictions, profile, knockoutSlots }) {
       const [selectedUser, setSelectedUser] = useState(null);
 
       const calculated = Object.values(users || {}).map(u => {
@@ -1643,6 +1848,8 @@
           const pts = calcMatchPoints(m, upred[m.id]);
           if (pts !== null) { score += pts; count++; if (pts === 3) exact++; if (pts === 1) correct++; }
         });
+        const finalPts = calcFinalPredPoints(u.uid, predictions, knockoutSlots, matches);
+        score += finalPts;
         const hitRate = count > 0 ? Math.round(((exact+correct)/count)*100) : null;
         return { ...u, score, exact, correct, count, hitRate };
       }).sort((a,b) => b.score - a.score || b.exact - a.exact);
@@ -1666,7 +1873,7 @@
 
           <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.4rem",color:"#facc15",marginBottom:4}}>LEADERBOARD</div>
           <div style={{fontSize:"0.62rem",color:"#5a6070",marginBottom:12}}>
-            Exact score = 3pts · Correct result = 1pt · Tap a player to see their picks
+            Exact score = 3pts · Correct result = 1pt · Final prediction = up to 20pts
           </div>
           {calculated.map((u, idx) => {
             const isFirst = idx === 0;
@@ -1910,6 +2117,11 @@
         fbSet(`knockoutSlots/${key}`, teamName || null);
       };
 
+      const saveFinalPrediction = (pick) => {
+        if (!profile) return;
+        fbSet(`predictions/${profile.uid}/finalPick`, pick);
+      };
+
       if (loadingSession) {
         return (
           <div style={{minHeight:"100vh",background:"#080b12",display:"flex",alignItems:"center",justifyContent:"center",color:"#7a8090"}}>
@@ -1957,10 +2169,10 @@
           </div>
 
           {tab === "groups" && <GroupsTab t={t} matches={matches} />}
-          {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} venueFilter={venueFilter} onClearVenueFilter={()=>setVenueFilter(null)} />}
+          {tab === "schedule" && <ScheduleTab key={scheduleKey} t={t} matches={matches} profile={profile} predictions={predictions} users={users} onScoreModal={setScoreModal} onPredictModal={setPredictModal} venueFilter={venueFilter} onClearVenueFilter={()=>setVenueFilter(null)} knockoutSlots={knockoutSlots} onSaveFinalPred={saveFinalPrediction} />}
           {tab === "knockout" && <KnockoutTab t={t} knockoutSlots={knockoutSlots} profile={profile} onSaveSlot={saveKnockoutSlot} />}
           {tab === "venues" && <VenuesTab t={t} matches={matches} onVenueSelect={(vid)=>{ setVenueFilter(vid); setTab("schedule"); }} />}
-          {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} profile={profile} />}
+          {tab === "leaderboard" && <LeaderboardTab t={t} users={users} matches={matches} predictions={predictions} profile={profile} knockoutSlots={knockoutSlots} />}
           {tab === "me" && <ProfileTab profile={profile} t={t} onUpdateTeams={handleUpdateTeams} />}
 
           <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1018",borderTop:"1px solid #1e2230",display:"flex",zIndex:50}}>
