@@ -621,16 +621,22 @@
     function ScoreModal({ match, t, profile, onSave, onClose }) {
       const [h, setH] = useState(match.homeScore??"");
       const [a, setA] = useState(match.awayScore??"");
+      const [hasPens, setHasPens] = useState(match.homePens!=null || match.awayPens!=null);
+      const [hp, setHp] = useState(match.homePens??"");
+      const [ap, setAp] = useState(match.awayPens??"");
       const [pin, setPin] = useState("");
       const [err, setErr] = useState("");
+      const isKnockout = match.id >= 73;
 
       const save = () => {
+        const homeScore = h===""?0:+h, awayScore = a===""?0:+a;
+        const penData = hasPens ? { homePens: hp===""?0:+hp, awayPens: ap===""?0:+ap } : { homePens: null, awayPens: null };
         // Check against profile PIN first, then fall back to reading from Firebase
         const localPin = profile?.adminPin;
         if (localPin) {
           // We have a local PIN — check against it
           if (pin !== String(localPin)) { setErr("Wrong PIN"); return; }
-          onSave(h===""?0:+h, a===""?0:+a);
+          onSave(homeScore, awayScore, penData);
         } else if (db && profile?.uid) {
           // No local PIN — read from Firebase (handles cross-device case)
           db.ref(`users/${profile.uid}/adminPin`).once("value").then(snap => {
@@ -643,7 +649,7 @@
               stored.adminPin = fbPin;
               localStorage.setItem("wc26v4_profile", JSON.stringify(stored));
             }
-            onSave(h===""?0:+h, a===""?0:+a);
+            onSave(homeScore, awayScore, penData);
           }).catch(() => setErr("Could not verify PIN"));
         } else {
           setErr("Cannot verify PIN — check connection");
@@ -654,7 +660,7 @@
           <div style={{background:"#141720",border:"1px solid #facc15",borderRadius:20,padding:"1.5rem",width:"100%",maxWidth:380}}>
             <div style={{fontSize:"0.65rem",color:"#facc15",fontWeight:700,letterSpacing:"0.12em",marginBottom:3}}>{matchRoundLabel(match)}</div>
             <div style={{fontSize:"0.7rem",color:"#5a6070",marginBottom:18}}>{match.date} {match.time} {t.timeLabel}</div>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:isKnockout?12:20}}>
               <div style={{flex:1,textAlign:"center"}}>
                 <div style={{height:"24px", display:"flex", alignItems:"center", justifyContent:"center"}}><Flag team={match.home} /></div>
                 <div style={{fontWeight:700,fontSize:"0.8rem",color:"#f0f4ff",marginTop:3}}>{match.home}</div>
@@ -669,6 +675,34 @@
                   style={{marginTop:8,width:58,textAlign:"center",background:"#0a0d14",border:"2px solid #facc15",borderRadius:8,padding:"6px 4px",fontSize:"1.4rem",fontWeight:800,color:"#facc15",fontFamily:"'Bebas Neue',sans-serif"}}/>
               </div>
             </div>
+
+            {isKnockout && (
+              <div style={{marginBottom:16}}>
+                <label style={{display:"flex",alignItems:"center",gap:7,fontSize:"0.68rem",color:"#a78bfa",fontWeight:700,cursor:"pointer",marginBottom:hasPens?8:0}}>
+                  <input type="checkbox" checked={hasPens} onChange={e=>setHasPens(e.target.checked)} style={{accentColor:"#facc15"}}/>
+                  Decided on penalties?
+                </label>
+                {hasPens && (
+                  <div style={{display:"flex",alignItems:"center",gap:10,background:"#0d1018",border:"1px solid #2a3040",borderRadius:10,padding:"10px"}}>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{fontSize:"0.55rem",color:"#5a6070",marginBottom:4}}>PENS</div>
+                      <input type="number" min="0" value={hp} onChange={e=>setHp(e.target.value)}
+                        style={{width:44,textAlign:"center",background:"#141720",border:"1px solid #a78bfa",borderRadius:6,padding:"4px",fontSize:"0.95rem",fontWeight:800,color:"#a78bfa"}}/>
+                    </div>
+                    <div style={{color:"#3a4050",fontWeight:700,fontSize:"0.8rem"}}>—</div>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{fontSize:"0.55rem",color:"#5a6070",marginBottom:4}}>PENS</div>
+                      <input type="number" min="0" value={ap} onChange={e=>setAp(e.target.value)}
+                        style={{width:44,textAlign:"center",background:"#141720",border:"1px solid #a78bfa",borderRadius:6,padding:"4px",fontSize:"0.95rem",fontWeight:800,color:"#a78bfa"}}/>
+                    </div>
+                  </div>
+                )}
+                <div style={{fontSize:"0.56rem",color:"#5a6070",marginTop:6,lineHeight:1.4}}>
+                  Enter the score after extra time above. Penalty result is shown for reference only — predictions are scored against the ET score.
+                </div>
+              </div>
+            )}
+
             <div style={{marginBottom:12}}>
               <input type="password" value={pin} onChange={e=>setPin(e.target.value)} placeholder="Admin PIN"
                 style={{width:"100%",background:"#0a0d14",border:"1px solid #1e2230",borderRadius:8,padding:"8px 12px",color:"#f0f4ff",boxSizing:"border-box"}}/>
@@ -815,9 +849,17 @@
             </div>
             <div style={{textAlign:"center",minWidth:72}}>
               {hasScore
-                ? <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.7rem",color:"#facc15",lineHeight:1}}>{match.homeScore} – {match.awayScore}</div>
+                ? <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:match.homePens!=null?"1.3rem":"1.7rem",color:"#facc15",lineHeight:1}}>
+                    {match.homePens!=null
+                      ? <>{match.homeScore} <span style={{fontSize:"0.85rem",color:"#a78bfa"}}>({match.homePens})</span> – {match.awayScore} <span style={{fontSize:"0.85rem",color:"#a78bfa"}}>({match.awayPens})</span></>
+                      : <>{match.homeScore} – {match.awayScore}</>
+                    }
+                  </div>
                 : <div style={{color:"#3a4050",fontWeight:700,fontSize:"0.9rem"}}>{t.vs}</div>
               }
+              {match.homePens!=null && (
+                <div style={{fontSize:"0.55rem",color:"#a78bfa",marginTop:1}}>pens</div>
+              )}
               {/* Countdown */}
               {!hasScore && countdown && status==="upcoming" && (
                 <div style={{fontSize:"0.58rem",color:"#5a6070",marginTop:2}}>⏱ {countdown}</div>
@@ -2168,9 +2210,9 @@
         if (db) fbSet(`users/${profile.uid}`, updated);
       };
 
-      const saveMatchScore = (h, a) => {
+      const saveMatchScore = (h, a, penData) => {
         if (!scoreModal) return;
-        fbSet(`matches/${scoreModal.id}`, { homeScore: h, awayScore: a });
+        fbSet(`matches/${scoreModal.id}`, { homeScore: h, awayScore: a, ...(penData||{}) });
         setScoreModal(null);
       };
 
