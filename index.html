@@ -777,6 +777,17 @@
       const homeIsPlaceholder = isKnockoutSlot && !knockoutSlots?.[`${match.id}_home`];
       const awayIsPlaceholder = isKnockoutSlot && !knockoutSlots?.[`${match.id}_away`];
 
+      // Determine who advances on knockout matches (regulation/ET winner, or penalty winner if tied)
+      const isKO = match.id >= 73;
+      let advancer = null;
+      if (isKO && hasScore) {
+        if (match.homeScore > match.awayScore) advancer = "home";
+        else if (match.awayScore > match.homeScore) advancer = "away";
+        else if (match.homePens != null && match.awayPens != null) {
+          advancer = match.homePens > match.awayPens ? "home" : "away";
+        }
+      }
+
       const openTeamEdit = () => {
         setEditHome(knockoutSlots?.[`${match.id}_home`] || "");
         setEditAway(knockoutSlots?.[`${match.id}_away`] || "");
@@ -845,7 +856,9 @@
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
               <div style={{height:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}><Flag team={displayHome}/></div>
-              <div style={{fontWeight:700,fontSize:"0.72rem",color:homeIsPlaceholder?"#4a5060":"#f0f4ff",marginTop:4,textAlign:"center"}}>{displayHome}</div>
+              <div style={{fontWeight:700,fontSize:"0.72rem",color:homeIsPlaceholder?"#4a5060":"#f0f4ff",marginTop:4,textAlign:"center"}}>
+                {displayHome}{advancer==="home" && <span style={{color:"#facc15"}}> ⭐</span>}
+              </div>
             </div>
             <div style={{textAlign:"center",minWidth:72}}>
               {hasScore
@@ -859,6 +872,11 @@
               }
               {match.homePens!=null && (
                 <div style={{fontSize:"0.55rem",color:"#a78bfa",marginTop:1}}>pens</div>
+              )}
+              {isKO && advancer && (
+                <div style={{fontSize:"0.52rem",color:"#facc15",marginTop:1,fontWeight:700}}>
+                  {advancer==="home"?displayHome:displayAway} advances
+                </div>
               )}
               {/* Countdown */}
               {!hasScore && countdown && status==="upcoming" && (
@@ -874,7 +892,9 @@
             </div>
             <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
               <div style={{height:"16px",display:"flex",alignItems:"center",justifyContent:"center"}}><Flag team={displayAway}/></div>
-              <div style={{fontWeight:700,fontSize:"0.72rem",color:awayIsPlaceholder?"#4a5060":"#f0f4ff",marginTop:4,textAlign:"center"}}>{displayAway}</div>
+              <div style={{fontWeight:700,fontSize:"0.72rem",color:awayIsPlaceholder?"#4a5060":"#f0f4ff",marginTop:4,textAlign:"center"}}>
+                {displayAway}{advancer==="away" && <span style={{color:"#facc15"}}> ⭐</span>}
+              </div>
             </div>
           </div>
 
