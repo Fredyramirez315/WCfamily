@@ -1651,19 +1651,19 @@
 
               {/* R16 boxes */}
               {R16_ORDER.map((no,j)=>box(no, CX[1], r16Top(j), BW[1], COLORS[1],
-                matchDef[no].home, matchDef[no].away, false, false, false, false))}
+                getLabel(no,"home"), getLabel(no,"away"), true, true, isFilled(no,"home"), isFilled(no,"away")))}
 
               {/* QF boxes */}
               {QF_ORDER.map((no,k)=>box(no, CX[2], qfTop(k), BW[2], COLORS[2],
-                matchDef[no].home, matchDef[no].away, false, false, false, false))}
+                getLabel(no,"home"), getLabel(no,"away"), true, true, isFilled(no,"home"), isFilled(no,"away")))}
 
               {/* SF boxes */}
               {SF_ORDER.map((no,m)=>box(no, CX[3], sfTop(m), BW[3], COLORS[3],
-                matchDef[no].home, matchDef[no].away, false, false, false, false))}
+                getLabel(no,"home"), getLabel(no,"away"), true, true, isFilled(no,"home"), isFilled(no,"away")))}
 
               {/* Final box */}
               {box(104, CX[4], finalTop, BW[4], COLORS[4],
-                matchDef[104].home, matchDef[104].away, false, false, false, false)}
+                getLabel(104,"home"), getLabel(104,"away"), true, true, isFilled(104,"home"), isFilled(104,"away"))}
 
             </div>
           </div>
