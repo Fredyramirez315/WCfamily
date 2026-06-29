@@ -1371,7 +1371,7 @@
                         if (sa !== sb) return sa - sb;
                         return matchKickoffDate(a) - matchKickoffDate(b);
                       })
-                    : matchesByDate[dateStr].filter(m => matchStatus(m) !== "finished");
+                    : [...matchesByDate[dateStr]].filter(m => matchStatus(m) !== "finished").sort((a,b) => matchKickoffDate(a) - matchKickoffDate(b));
                   if (upcomingInDay.length === 0) return null;
                   const isOpen = isDateToday || !!openDates[dateStr];
                   const dOptions = { weekday:"long", month:"short", day:"numeric", year:"numeric" };
